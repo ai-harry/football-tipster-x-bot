@@ -1,0 +1,2 @@
+2024-12-07T00:03:51.667847: 'OddsAnalyzer' object has no attribute 'analyze_optimized_odds'
+2024-12-07T00:07:34.638086: Client.__init__() got an unexpected keyword argument 'proxies'
