@@ -1,0 +1,10 @@
+football-odds-fetcher/
+├── .env.example
+├── .gitignore
+├── README.md
+├── requirements.txt
+├── setup.py
+├── src/
+│   └── odds_api_client.py
+└── tests/
+    └── test_odds_api_client.py 
