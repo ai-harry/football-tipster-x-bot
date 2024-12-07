@@ -3,7 +3,7 @@ services:
     name: football-betting-bot-api
     env: python
     buildCommand: pip install -r requirements.txt && pip install -e .
-    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT --workers 4
+    startCommand: python -m uvicorn src.api.main:app --host 0.0.0.0 --port $PORT --workers 4
     envVars:
       - key: ODDS_API_KEY
         sync: false

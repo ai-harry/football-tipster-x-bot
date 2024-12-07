@@ -4,10 +4,10 @@ import logging
 import sys
 import os
 from typing import Dict
-
-# Import from src package
-from src.betting_bot import BettingBot
 from dotenv import load_dotenv
+
+# Import using relative import
+from ..betting_bot import BettingBot
 
 # Configure logging
 logging.basicConfig(

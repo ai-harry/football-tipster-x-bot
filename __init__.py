@@ -1,0 +1,3 @@
+"""
+Football Betting Bot package
+""" 
