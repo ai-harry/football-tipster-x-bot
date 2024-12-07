@@ -6,10 +6,7 @@ import os
 from typing import Dict
 
 # Import from src package
-from src.odds_api_client import OddsAPIClient
-from src.openai_analyzer import OddsAnalyzer
-from src.tweet_generator import TweetGenerator
-from src.twitter_poster import TwitterPoster
+from src.betting_bot import BettingBot
 from dotenv import load_dotenv
 
 # Configure logging
@@ -35,40 +32,17 @@ def run_automation():
     try:
         load_dotenv()
         
-        # Initialize clients
-        odds_client = OddsAPIClient(os.getenv('ODDS_API_KEY'))
-        analyzer = OddsAnalyzer(os.getenv('OPENAI_API_KEY'))
-        tweet_gen = TweetGenerator(os.getenv('OPENAI_API_KEY'))
-        twitter = TwitterPoster(
-            api_key=os.getenv('TWITTER_API_KEY'),
-            api_secret=os.getenv('TWITTER_API_SECRET'),
-            access_token=os.getenv('TWITTER_ACCESS_TOKEN'),
-            access_token_secret=os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
-        )
+        # Initialize betting bot
+        bot = BettingBot()
         
         logger.info("Automation started")
         
         while not stop_event.is_set():
             try:
-                # Fetch odds data
-                odds_data = odds_client.get_odds(
-                    sport='soccer_epl',
-                    regions=['us', 'uk'],
-                    markets=['h2h']
-                )
-                
-                if odds_data:
-                    # Analyze odds
-                    analysis = analyzer.analyze_odds(odds_data)
-                    
-                    # Generate and post tweet
-                    tweet = tweet_gen.generate_optimized_tweet(analysis)
-                    if tweet:
-                        result = twitter.post_tweet(tweet)
-                        logger.info(f"Tweet posted: {result.get('tweet_url')}")
-                    
-                    # Save analysis
-                    analyzer.save_analysis(analysis)
+                # Run one iteration of analysis and posting
+                result = bot.analyze_and_post()
+                if result:
+                    logger.info("Successfully completed analysis and posting")
                 
                 # Wait for 2 hours before next iteration
                 stop_event.wait(7200)  # 2 hours in seconds
