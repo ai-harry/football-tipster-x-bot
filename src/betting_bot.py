@@ -5,10 +5,10 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional
 
-from odds_api_client import OddsAPIClient
-from openai_analyzer import OddsAnalyzer
-from tweet_generator import TweetGenerator
-from twitter_poster import TwitterPoster
+from src.odds_api_client import OddsAPIClient
+from src.openai_analyzer import OddsAnalyzer
+from src.tweet_generator import TweetGenerator
+from src.twitter_poster import TwitterPoster
 from dotenv import load_dotenv
 
 # Configure logging
