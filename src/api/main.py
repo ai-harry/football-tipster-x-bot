@@ -5,13 +5,11 @@ import sys
 import os
 from typing import Dict
 
-# Add parent directory to path to import modules
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from odds_api_client import OddsAPIClient
-from openai_analyzer import OddsAnalyzer
-from tweet_generator import TweetGenerator
-from twitter_poster import TwitterPoster
+# Import from src package
+from src.odds_api_client import OddsAPIClient
+from src.openai_analyzer import OddsAnalyzer
+from src.tweet_generator import TweetGenerator
+from src.twitter_poster import TwitterPoster
 from dotenv import load_dotenv
 
 # Configure logging
