@@ -43,8 +43,8 @@ def run_automation():
                 if result:
                     logger.info("Successfully completed analysis and posting")
                 
-                # Wait for 2 hours before next iteration
-                stop_event.wait(7200)  # 2 hours in seconds
+                # Wait for 1 hour before next iteration
+                stop_event.wait(3600)  # 1 hour in seconds
                 
             except Exception as e:
                 logger.error(f"Error in automation loop: {str(e)}")

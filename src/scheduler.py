@@ -53,13 +53,13 @@ def run_scheduler():
     """Run the scheduler"""
     load_dotenv()  # Load environment variables
     
-    # Schedule the job every 2 hours
-    schedule.every(2).hours.do(job)
+    # Schedule the job every 1 hour
+    schedule.every(1).hours.do(job)
     
     # Run the job immediately once
     job()
     
-    print("🤖 Bot started! Running every 2 hours...")
+    print("🤖 Bot started! Running every 1 hour...")
     
     # Keep the script running
     while True:

@@ -100,8 +100,8 @@ class BettingBot:
         """Run the bot on a schedule."""
         logger.info("Starting scheduled bot...")
         
-        # Schedule the job to run every 2 hours
-        schedule.every(2).hours.do(self.analyze_and_post)
+        # Schedule the job to run every 1 hour
+        schedule.every(1).hours.do(self.analyze_and_post)
         
         # Run first analysis immediately
         self.analyze_and_post()
