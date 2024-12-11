@@ -52,10 +52,29 @@ class BettingBot:
     def analyze_and_post(self) -> Optional[Dict]:
         """Run the complete analysis and posting process."""
         try:
-            # Get current matches data
-            odds_data = self.odds_client.get_odds(['soccer_epl', 'soccer_spain_la_liga', 
-                                                 'soccer_germany_bundesliga1', 'soccer_italy_serie_a'])
+            # Get current matches data - Fix the API endpoints
+            sports = [
+                'soccer_epl',
+                'soccer_spain_la_liga',
+                'soccer_germany_bundesliga1',
+                'soccer_italy_serie_a'
+            ]
             
+            odds_data = {}
+            for sport in sports:
+                try:
+                    # Get odds for each sport separately
+                    sport_odds = self.odds_client.get_odds(
+                        sport_key=sport,
+                        regions=['uk', 'eu'],  # Use both UK and EU regions for better coverage
+                        markets=['h2h', 'totals']  # Get both head-to-head and totals markets
+                    )
+                    if sport_odds:
+                        odds_data[sport] = sport_odds
+                except Exception as e:
+                    logger.error(f"Error fetching odds for {sport}: {str(e)}")
+                    continue
+
             if not odds_data:
                 logger.warning("No odds data available")
                 return None

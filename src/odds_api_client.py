@@ -5,44 +5,37 @@ from datetime import datetime
 import requests
 import socket
 import socks
-from typing import Dict, List
+from typing import Dict, List, Optional
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OddsAPIClient:
-    """Client for interacting with The Odds API."""
+    """Client for interacting with the Odds API."""
     
     BASE_URL = "https://api.the-odds-api.com/v4"
     
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.session = requests.Session()
-        # Store original socket
-        self._original_socket = socket.socket
-    
-    def get_odds(self, 
-                 sport: str,
-                 regions: List[str] = ['us'],
-                 markets: List[str] = ['h2h']) -> List[Dict]:
-        """Get odds data for a sport."""
-        # Reset socket to original (no proxy)
-        socket.socket = self._original_socket
-        
-        params = {
-            'apiKey': self.api_key,
-            'regions': ','.join(regions),
-            'markets': ','.join(markets)
-        }
-        
+
+    def get_odds(self, sport_key: str, regions: List[str], markets: List[str]) -> Optional[Dict]:
+        """Get odds data for a specific sport."""
         try:
-            response = self.session.get(
-                f"{self.BASE_URL}/sports/{sport}/odds",
-                params=params,
-                timeout=30
-            )
-            response.raise_for_status()
+            url = f"{self.BASE_URL}/sports/{sport_key}/odds"
+            params = {
+                'apiKey': self.api_key,
+                'regions': ','.join(regions),
+                'markets': ','.join(markets)
+            }
+            
+            response = requests.get(url, params=params)
+            response.raise_for_status()  # Raise exception for bad status codes
+            
             return response.json()
-        finally:
-            # Restore SOCKS proxy for other connections
-            socket.socket = socks.socksocket
+            
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API request failed for {sport_key}: {str(e)}")
+            return None
     
     def save_odds_data(self, data: List[Dict], filename: str = None) -> None:
         """Save odds data to JSON file."""
