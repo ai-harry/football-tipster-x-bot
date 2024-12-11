@@ -71,9 +71,9 @@ class BettingBot:
             # Updated sport keys to exact API endpoint names
             sports = [
                 'soccer_epl',                # English Premier League
-                'soccer_spain_la_liga',      # Spanish La Liga (fixed)
-                'soccer_germany_bundesliga', # German Bundesliga (fixed)
-                'soccer_italy_serie_a'       # Italian Serie A (fixed)
+                'soccer_spain_la_liga',      # Spanish La Liga
+                'soccer_germany_bundesliga', # German Bundesliga
+                'soccer_italy_serie_a'       # Italian Serie A
             ]
             
             odds_data = {}
@@ -88,9 +88,23 @@ class BettingBot:
                     )
                     
                     if sport_odds:
-                        # Process each match for value
-                        odds_data[sport] = sport_odds
                         logger.info(f"Successfully fetched odds for {sport}")
+                        # Process matches for this sport
+                        for match in sport_odds:
+                            match_id = f"{match['home_team']}_{match['away_team']}"
+                            
+                            # Skip recently analyzed matches
+                            if match_id in self.last_analyzed_matches:
+                                continue
+                                
+                            # Add to valuable matches if it meets criteria
+                            if self._has_betting_value(match):
+                                valuable_matches.append({
+                                    'match_id': match_id,
+                                    'sport': sport,
+                                    'match_data': match
+                                })
+                                logger.info(f"Found valuable match: {match_id}")
                     else:
                         logger.warning(f"No odds data available for {sport}")
                 except Exception as e:
@@ -104,6 +118,7 @@ class BettingBot:
             # Sort matches by value potential and take the best one
             valuable_matches.sort(key=self._calculate_value_score, reverse=True)
             best_match = valuable_matches[0]
+            logger.info(f"Selected best match: {best_match['match_id']}")
 
             # Generate and post tweet
             tweet = self.tweet_gen.generate_optimized_tweet(best_match)
@@ -133,12 +148,21 @@ class BettingBot:
     def _has_betting_value(self, match: Dict) -> bool:
         """Determine if a match has potential betting value."""
         try:
-            # Simple value check - can be expanded based on your criteria
+            # Check if match has bookmakers data
             if not match.get('bookmakers'):
                 return False
-                
+            
+            # Calculate odds variance
             odds_variance = self._calculate_odds_variance(match)
-            return odds_variance > 0.15  # Minimum variance threshold
+            
+            # Lower the threshold to find more matches
+            min_variance = 0.10  # Reduced from 0.15
+            
+            has_value = odds_variance > min_variance
+            if has_value:
+                logger.info(f"Match {match['home_team']} vs {match['away_team']} has value (variance: {odds_variance:.2f})")
+            
+            return has_value
             
         except Exception as e:
             logger.error(f"Error checking match value: {str(e)}")
