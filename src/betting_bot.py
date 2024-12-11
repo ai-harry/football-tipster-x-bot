@@ -68,12 +68,12 @@ class BettingBot:
             if not self.can_post_tweet():
                 return None
 
-            # Updated sport keys to match The Odds API format
+            # Updated sport keys to exact API endpoint names
             sports = [
-                'soccer_epl',                  # English Premier League
-                'soccer_laliga',               # Spanish La Liga
-                'soccer_bundesliga_germany',   # German Bundesliga
-                'soccer_serie_a'               # Italian Serie A
+                'soccer_epl',                # English Premier League
+                'soccer_spain_la_liga',      # Spanish La Liga (fixed)
+                'soccer_germany_bundesliga', # German Bundesliga (fixed)
+                'soccer_italy_serie_a'       # Italian Serie A (fixed)
             ]
             
             odds_data = {}
@@ -89,23 +89,12 @@ class BettingBot:
                     
                     if sport_odds:
                         # Process each match for value
-                        for match in sport_odds:
-                            match_id = f"{match['home_team']}_{match['away_team']}"
-                            
-                            # Skip recently analyzed matches
-                            if match_id in self.last_analyzed_matches:
-                                continue
-                                
-                            # Add to valuable matches if it meets criteria
-                            if self._has_betting_value(match):
-                                valuable_matches.append({
-                                    'match_id': match_id,
-                                    'sport': sport,
-                                    'match_data': match
-                                })
-                                
+                        odds_data[sport] = sport_odds
+                        logger.info(f"Successfully fetched odds for {sport}")
+                    else:
+                        logger.warning(f"No odds data available for {sport}")
                 except Exception as e:
-                    logger.error(f"Error processing {sport}: {str(e)}")
+                    logger.error(f"Error fetching odds for {sport}: {str(e)}")
                     continue
 
             if not valuable_matches:

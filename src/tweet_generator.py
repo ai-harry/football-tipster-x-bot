@@ -11,9 +11,9 @@ class TweetGenerator:
     
     LEAGUE_DISPLAY = {
         'soccer_epl': 'Premier League',
-        'soccer_laliga': 'La Liga',
-        'soccer_bundesliga_germany': 'Bundesliga',
-        'soccer_serie_a': 'Serie A'
+        'soccer_spain_la_liga': 'La Liga',
+        'soccer_germany_bundesliga': 'Bundesliga',
+        'soccer_italy_serie_a': 'Serie A'
     }
     
     def __init__(self, api_key: str):
