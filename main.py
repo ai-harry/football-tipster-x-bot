@@ -4,6 +4,7 @@ import logging
 import os
 from typing import Dict
 from dotenv import load_dotenv
+from datetime import datetime
 
 # Import from src package
 from src.betting_bot import BettingBot
@@ -33,23 +34,29 @@ def run_automation():
         
         # Initialize betting bot
         bot = BettingBot()
+        last_run_hour = None
         
         logger.info("Automation started")
         
         while not stop_event.is_set():
             try:
-                # Run one iteration of analysis and posting
-                result = bot.analyze_and_post()
-                if result:
-                    logger.info("Successfully completed analysis and posting")
+                current_hour = datetime.now().hour
                 
-                # Wait for 1 hour before next iteration
-                stop_event.wait(3600)  # 1 hour in seconds
+                # Check if we need to run analysis for this hour
+                if current_hour != last_run_hour:
+                    # Run analysis and posting
+                    result = bot.analyze_and_post()
+                    if result:
+                        logger.info(f"Successfully completed analysis and posting at hour {current_hour}")
+                        last_run_hour = current_hour
+                
+                # Sleep for a shorter interval to check more frequently
+                stop_event.wait(300)  # Check every 5 minutes
                 
             except Exception as e:
                 logger.error(f"Error in automation loop: {str(e)}")
                 automation_status["last_error"] = str(e)
-                stop_event.wait(300)  # Wait 5 minutes on error
+                stop_event.wait(60)  # Wait 1 minute on error
                 
     except Exception as e:
         logger.error(f"Critical error in automation: {str(e)}")

@@ -1,0 +1,13 @@
+feat: Enhanced tweet generation with natural language improvements
+
+- Added time-aware greetings (morning/afternoon/evening)
+- Implemented varied analysis phrases and confidence expressions
+- Added phrase tracking to prevent repetition
+- Improved GPT-4 prompting for more natural language
+- Added fallback mechanism for error cases
+- Optimized temperature and model settings
+- Added detailed system prompts for consistent tone
+
+These changes make tweets sound more natural and conversational
+while maintaining professional betting insights. Tweets now vary
+by time of day and avoid repetitive patterns. 
