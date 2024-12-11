@@ -40,131 +40,150 @@ class BettingBot:
                 access_token_secret=os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
             )
             
-            # Track posted matches to avoid repetition
-            self.posted_matches = {}
+            # Track timing and content
+            self.last_tweet_time = None
+            self.last_analyzed_matches = set()
             
             logger.info("BettingBot initialized successfully")
             
         except Exception as e:
             logger.error(f"Failed to initialize BettingBot: {str(e)}")
             raise
-    
+
+    def can_post_tweet(self) -> bool:
+        """Check if enough time has passed since last tweet."""
+        if not self.last_tweet_time:
+            return True
+            
+        time_since_last = datetime.now() - self.last_tweet_time
+        if time_since_last.total_seconds() < 3600:  # 1 hour in seconds
+            logger.info(f"Only {time_since_last.total_seconds()/60:.1f} minutes since last tweet. Waiting...")
+            return False
+        return True
+
     def analyze_and_post(self) -> Optional[Dict]:
         """Run the complete analysis and posting process."""
         try:
-            # Get current matches data - Fix the API endpoints
+            # Check if we can post
+            if not self.can_post_tweet():
+                return None
+
+            # Updated sport keys to match The Odds API format
             sports = [
-                'soccer_epl',
-                'soccer_spain_la_liga',
-                'soccer_germany_bundesliga1',
-                'soccer_italy_serie_a'
+                'soccer_epl',                  # English Premier League
+                'soccer_laliga',               # Spanish La Liga
+                'soccer_bundesliga_germany',   # German Bundesliga
+                'soccer_serie_a'               # Italian Serie A
             ]
             
             odds_data = {}
+            valuable_matches = []
+            
             for sport in sports:
                 try:
-                    # Get odds for each sport separately
                     sport_odds = self.odds_client.get_odds(
                         sport_key=sport,
-                        regions=['uk', 'eu'],  # Use both UK and EU regions for better coverage
-                        markets=['h2h', 'totals']  # Get both head-to-head and totals markets
+                        regions=['uk', 'eu'],
+                        markets=['h2h', 'totals']
                     )
+                    
                     if sport_odds:
-                        odds_data[sport] = sport_odds
+                        # Process each match for value
+                        for match in sport_odds:
+                            match_id = f"{match['home_team']}_{match['away_team']}"
+                            
+                            # Skip recently analyzed matches
+                            if match_id in self.last_analyzed_matches:
+                                continue
+                                
+                            # Add to valuable matches if it meets criteria
+                            if self._has_betting_value(match):
+                                valuable_matches.append({
+                                    'match_id': match_id,
+                                    'sport': sport,
+                                    'match_data': match
+                                })
+                                
                 except Exception as e:
-                    logger.error(f"Error fetching odds for {sport}: {str(e)}")
+                    logger.error(f"Error processing {sport}: {str(e)}")
                     continue
 
-            if not odds_data:
-                logger.warning("No odds data available")
+            if not valuable_matches:
+                logger.info("No valuable betting opportunities found")
                 return None
 
-            # Filter out already posted matches
-            fresh_matches = self._filter_fresh_matches(odds_data)
-            
-            if not fresh_matches:
-                logger.info("No new matches to analyze")
-                return None
+            # Sort matches by value potential and take the best one
+            valuable_matches.sort(key=self._calculate_value_score, reverse=True)
+            best_match = valuable_matches[0]
 
-            # Analyze fresh matches
-            analysis = self.analyzer.analyze_odds(fresh_matches)
+            # Generate and post tweet
+            tweet = self.tweet_gen.generate_optimized_tweet(best_match)
             
-            if not analysis:
-                logger.warning("No valuable betting opportunities found")
-                return None
-
-            # Generate tweet with fresh analysis
-            tweet = self.tweet_gen.generate_optimized_tweet(analysis)
-            
-            if not tweet:
-                logger.error("Failed to generate tweet")
-                return None
-
-            # Post tweet
-            post_result = self.twitter.post_tweet(tweet)
-            
-            if post_result:
-                # Update posted matches
-                self._update_posted_matches(fresh_matches)
+            if tweet:
+                result = self.twitter.post_tweet(tweet)
                 
-                return {
-                    'timestamp': datetime.now(),
-                    'analysis': analysis,
-                    'tweet': tweet,
-                    'post_result': post_result
-                }
-            
+                if result:
+                    # Update tracking
+                    self.last_tweet_time = datetime.now()
+                    self.last_analyzed_matches.add(best_match['match_id'])
+                    
+                    logger.info(f"Successfully posted tweet at {self.last_tweet_time}")
+                    
+                    return {
+                        'timestamp': self.last_tweet_time,
+                        'match': best_match,
+                        'tweet': tweet
+                    }
+
             return None
 
         except Exception as e:
             logger.error(f"Error in analyze_and_post: {str(e)}")
             return None
 
-    def _filter_fresh_matches(self, odds_data: Dict) -> Dict:
-        """Filter out matches that were already posted about."""
-        fresh_matches = {}
-        current_time = datetime.now()
-
-        for sport_key, matches in odds_data.items():
-            fresh_matches[sport_key] = []
+    def _has_betting_value(self, match: Dict) -> bool:
+        """Determine if a match has potential betting value."""
+        try:
+            # Simple value check - can be expanded based on your criteria
+            if not match.get('bookmakers'):
+                return False
+                
+            odds_variance = self._calculate_odds_variance(match)
+            return odds_variance > 0.15  # Minimum variance threshold
             
-            for match in matches:
-                match_id = f"{match['home_team']}_{match['away_team']}_{match['commence_time']}"
+        except Exception as e:
+            logger.error(f"Error checking match value: {str(e)}")
+            return False
+
+    def _calculate_odds_variance(self, match: Dict) -> float:
+        """Calculate the variance in odds across bookmakers."""
+        try:
+            all_odds = []
+            for bookmaker in match.get('bookmakers', []):
+                for market in bookmaker.get('markets', []):
+                    if market['key'] == 'h2h':
+                        for outcome in market['outcomes']:
+                            all_odds.append(outcome['price'])
+            
+            if not all_odds:
+                return 0
                 
-                # Check if match was posted and if it's been less than 4 hours
-                if match_id in self.posted_matches:
-                    post_time = self.posted_matches[match_id]
-                    if (current_time - post_time) < timedelta(hours=4):
-                        continue
-                
-                fresh_matches[sport_key].append(match)
+            return max(all_odds) - min(all_odds)
+            
+        except Exception as e:
+            logger.error(f"Error calculating odds variance: {str(e)}")
+            return 0
 
-        return fresh_matches
+    def _calculate_value_score(self, match: Dict) -> float:
+        """Calculate a value score for sorting matches."""
+        try:
+            odds_variance = self._calculate_odds_variance(match['match_data'])
+            return odds_variance
+            
+        except Exception as e:
+            logger.error(f"Error calculating value score: {str(e)}")
+            return 0
 
-    def _update_posted_matches(self, matches: Dict):
-        """Update the record of posted matches."""
-        current_time = datetime.now()
-        
-        # Add new matches
-        for sport_key, sport_matches in matches.items():
-            for match in sport_matches:
-                match_id = f"{match['home_team']}_{match['away_team']}_{match['commence_time']}"
-                self.posted_matches[match_id] = current_time
-
-        # Clean up old entries (older than 4 hours)
-        self._cleanup_old_matches()
-
-    def _cleanup_old_matches(self):
-        """Remove matches older than 4 hours from posted_matches."""
-        current_time = datetime.now()
-        cutoff_time = current_time - timedelta(hours=4)
-        
-        self.posted_matches = {
-            match_id: post_time 
-            for match_id, post_time in self.posted_matches.items() 
-            if post_time > cutoff_time
-        }
-    
     def run_scheduled(self):
         """Run the bot on a schedule."""
         logger.info("Starting scheduled bot...")

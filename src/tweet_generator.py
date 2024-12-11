@@ -1,151 +1,160 @@
 from datetime import datetime
 import random
 import logging
-from typing import Dict, Set
+from typing import Dict
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
 class TweetGenerator:
-    """Generates human-like tweets for sports betting insights."""
+    """Generates valuable betting insight tweets."""
+    
+    LEAGUE_DISPLAY = {
+        'soccer_epl': 'Premier League',
+        'soccer_laliga': 'La Liga',
+        'soccer_bundesliga_germany': 'Bundesliga',
+        'soccer_serie_a': 'Serie A'
+    }
     
     def __init__(self, api_key: str):
-        """Initialize OpenAI client and tweet components."""
+        """Initialize OpenAI client."""
         self.client = OpenAI(api_key=api_key)
         
-        # Dynamic components for tweet variation
-        self.greetings = {
-            'morning': [
-                "☀️ Early value spotted!",
-                "🌅 Morning football fans!",
-                "📊 Starting the day with this",
-                "☕️ Early analysis for today"
-            ],
-            'afternoon': [
-                "👋 Afternoon insight",
-                "🎯 Just analyzed this one",
-                "💭 Interesting odds alert",
-                "📱 Quick midday update"
-            ],
-            'evening': [
-                "🌆 Evening value pick",
-                "👀 Night games looking good",
-                "💡 Late action worth checking",
-                "🤔 Interesting evening odds"
-            ]
-        }
-        
-        self.analysis_phrases = [
-            "Form suggests",
-            "Stats showing",
-            "Numbers indicate",
-            "Recent performance hints",
-            "Data points to",
-            "Trends showing"
-        ]
-        
-        self.confidence_expressions = [
-            "Looking solid",
-            "Seems promising",
-            "Worth considering",
-            "Catching my eye",
-            "Interesting value"
-        ]
-        
-        self.used_phrases = set()  # Track recently used phrases
-
-    def generate_optimized_tweet(self, analysis: Dict) -> str:
-        """Generate a natural-sounding tweet based on betting analysis."""
+    def generate_optimized_tweet(self, data: Dict) -> str:
+        """Generate a tweet with specific betting insights."""
         try:
-            # Get time-appropriate greeting
-            hour = datetime.now().hour
-            time_of_day = (
-                'morning' if 5 <= hour < 12
-                else 'afternoon' if 12 <= hour < 18
-                else 'evening'
+            match_data = data['match_data']
+            sport = data['sport']
+            
+            # Extract odds and calculate probabilities
+            odds_info = self._extract_odds_info(match_data)
+            if not odds_info:
+                return None
+                
+            # Format match details
+            match_details = self._format_match_details(
+                match_data, 
+                sport, 
+                odds_info
             )
             
-            # Select fresh phrases
-            greeting = self._get_unique_phrase(self.greetings[time_of_day])
-            analysis_phrase = self._get_unique_phrase(self.analysis_phrases)
-            confidence = self._get_unique_phrase(self.confidence_expressions)
-            
-            # Create context for GPT
-            prompt = self._create_prompt(
-                analysis=analysis,
-                greeting=greeting,
-                analysis_phrase=analysis_phrase,
-                confidence=confidence
-            )
-            
+            # Create prompts
+            system_prompt = """You are an expert football betting analyst sharing valuable insights. Your tweets must:
+
+1. Always include specific teams and exact odds
+2. Highlight the best available odds and clear value opportunities
+3. Include one concrete stat or recent form information
+4. Explain why the odds represent value
+5. Sound natural while being precise and informative
+
+Avoid:
+- Vague statements about "patterns" or "trends"
+- Generic phrases like "worth watching" or "keep an eye on"
+- Tweets without specific odds or probabilities
+- Marketing-style language or excessive hype
+- Repetitive phrases or structures"""
+
+            user_prompt = f"""Create a valuable betting insight tweet for this match:
+
+{match_details}
+
+Requirements:
+1. Start with a brief, natural greeting
+2. Mention both teams and the specific league
+3. State the best available odds clearly
+4. Explain the value based on probability comparison
+5. Include one relevant team stat or form info
+6. Add 1-2 relevant hashtags
+7. Keep under 280 characters
+8. Sound like a knowledgeable bettor sharing insights
+
+Example structure:
+"[Greeting] [League] value: [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"
+"""
+
             # Generate tweet using GPT-4
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3,
+                temperature=0.7,
                 max_tokens=150,
                 presence_penalty=0.6,
-                frequency_penalty=0.7
+                frequency_penalty=0.3
             )
             
             tweet = response.choices[0].message.content
             
-            # Ensure tweet length
+            # Validate and trim tweet if needed
             if len(tweet) > 280:
                 tweet = self._trim_tweet(tweet)
             
             return tweet
             
         except Exception as e:
-            logger.error(f"Error generating tweet: {str(e)}")
-            return self._generate_fallback_tweet(analysis)
+            logger.error(f"Tweet generation error: {str(e)}")
+            return None
 
-    def _get_unique_phrase(self, phrases: list) -> str:
-        """Get a phrase that hasn't been used recently."""
-        available = [p for p in phrases if p not in self.used_phrases]
-        if not available:
-            available = phrases
-            self.used_phrases.clear()
-        
-        phrase = random.choice(available)
-        self.used_phrases.add(phrase)
-        return phrase
+    def _extract_odds_info(self, match_data: Dict) -> Dict:
+        """Extract and analyze odds from match data."""
+        try:
+            best_odds = {'home': 0, 'away': 0, 'draw': 0}
+            implied_probs = {'home': 0, 'away': 0, 'draw': 0}
+            
+            for bookmaker in match_data.get('bookmakers', []):
+                for market in bookmaker.get('markets', []):
+                    if market['key'] == 'h2h':
+                        for outcome in market['outcomes']:
+                            odds = outcome['price']
+                            implied_prob = (1 / odds) * 100
+                            
+                            if outcome['name'] == match_data['home_team']:
+                                best_odds['home'] = max(best_odds['home'], odds)
+                                implied_probs['home'] = implied_prob
+                            elif outcome['name'] == match_data['away_team']:
+                                best_odds['away'] = max(best_odds['away'], odds)
+                                implied_probs['away'] = implied_prob
+                            else:
+                                best_odds['draw'] = max(best_odds['draw'], odds)
+                                implied_probs['draw'] = implied_prob
+            
+            return {
+                'best_odds': best_odds,
+                'implied_probs': implied_probs
+            }
+            
+        except Exception as e:
+            logger.error(f"Error extracting odds info: {str(e)}")
+            return None
 
-    def _create_prompt(self, analysis: Dict, greeting: str, 
-                      analysis_phrase: str, confidence: str) -> str:
-        """Create a detailed prompt for GPT."""
-        return f"""Create a natural, conversational tweet about this betting insight:
-
-Match Details:
-{self._format_match_details(analysis)}
-
-Use these components naturally (but don't force all of them):
-- Greeting: {greeting}
-- Analysis phrase: {analysis_phrase}
-- Confidence: {confidence}
-
-Make it sound like a real person sharing their thoughts:
-1. Be conversational and authentic
-2. Include specific odds or stats naturally
-3. Add one relevant emoji (not too many)
-4. Use 1-2 natural hashtags
-5. Keep it under 280 characters"""
-
-    def _format_match_details(self, analysis: Dict) -> str:
+    def _format_match_details(self, match_data: Dict, sport: str, odds_info: Dict) -> str:
         """Format match details for the prompt."""
-        match_info = analysis.get('match_info', {})
-        return f"""
-Teams: {match_info.get('home_team')} vs {match_info.get('away_team')}
-Current Odds: {match_info.get('odds')}
-Key Stats: {match_info.get('key_stats', 'Recent form shows interesting pattern')}
-Value Rating: {match_info.get('value_rating', 'Medium')}
-"""
+        league_name = self.LEAGUE_DISPLAY.get(sport, sport)
+        
+        return f"""Match: {match_data['home_team']} vs {match_data['away_team']}
+League: {league_name}
+Start Time: {match_data.get('commence_time', 'Unknown')}
+
+Best Available Odds:
+- Home Win: {odds_info['best_odds']['home']:.2f} (Implied {odds_info['implied_probs']['home']:.1f}%)
+- Away Win: {odds_info['best_odds']['away']:.2f} (Implied {odds_info['implied_probs']['away']:.1f}%)
+- Draw: {odds_info['best_odds']['draw']:.2f} (Implied {odds_info['implied_probs']['draw']:.1f}%)
+
+Recent Form:
+{self._get_form_info(match_data)}"""
+
+    def _get_form_info(self, match_data: Dict) -> str:
+        """Extract form information if available."""
+        home_team = match_data['home_team']
+        away_team = match_data['away_team']
+        
+        # You can expand this to include actual form data from your data source
+        return f"- {home_team}: Recent performance and stats\n- {away_team}: Recent performance and stats"
 
     def _trim_tweet(self, tweet: str) -> str:
-        """Trim tweet to fit character limit while maintaining readability."""
+        """Trim tweet while maintaining readability."""
         if len(tweet) <= 280:
             return tweet
             
@@ -158,27 +167,3 @@ Value Rating: {match_info.get('value_rating', 'Medium')}
                 break
         
         return trimmed.strip() + '...'
-
-    def _generate_fallback_tweet(self, analysis: Dict) -> str:
-        """Generate a simple fallback tweet if main generation fails."""
-        match_info = analysis.get('match_info', {})
-        return (
-            f"📊 Value alert for {match_info.get('home_team')} vs "
-            f"{match_info.get('away_team')}! Odds: {match_info.get('odds')} "
-            f"#FootballBetting"
-        )
-
-    # System prompt for GPT
-    SYSTEM_PROMPT = """You are a casual sports betting enthusiast sharing insights with friends. 
-Your style is:
-- Natural and conversational
-- Knowledgeable but not overly technical
-- Friendly but professional
-- Focused on sharing valuable insights
-
-Avoid:
-- Marketing language
-- Excessive emojis
-- Overly enthusiastic tone
-- Bot-like patterns
-- Repetitive phrases"""
