@@ -34,11 +34,21 @@ class BettingBot:
             self.odds_client = OddsAPIClient(os.getenv('ODDS_API_KEY'))
             self.analyzer = OddsAnalyzer(os.getenv('OPENAI_API_KEY'))
             self.tweet_gen = TweetGenerator(os.getenv('OPENAI_API_KEY'))
+            
+            # Initialize Twitter client with error handling
+            twitter_api_key = os.getenv('TWITTER_API_KEY')
+            twitter_api_secret = os.getenv('TWITTER_API_SECRET')
+            twitter_access_token = os.getenv('TWITTER_ACCESS_TOKEN')
+            twitter_access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+            
+            if not all([twitter_api_key, twitter_api_secret, twitter_access_token, twitter_access_token_secret]):
+                raise ValueError("Missing Twitter credentials")
+            
             self.twitter = TwitterPoster(
-                api_key=os.getenv('TWITTER_API_KEY'),
-                api_secret=os.getenv('TWITTER_API_SECRET'),
-                access_token=os.getenv('TWITTER_ACCESS_TOKEN'),
-                access_token_secret=os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+                api_key=twitter_api_key,
+                api_secret=twitter_api_secret,
+                access_token=twitter_access_token,
+                access_token_secret=twitter_access_token_secret
             )
             
             # Track timing and content
