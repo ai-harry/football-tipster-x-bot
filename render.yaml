@@ -4,7 +4,6 @@ services:
     env: python
     buildCommand: |
       python -m pip install --upgrade pip
-      pip install wheel
       pip install -r requirements.txt --no-cache-dir
     startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
     envVars:
@@ -12,13 +11,6 @@ services:
         value: 3.9.12
       - key: PORT
         value: 8000
-      - key: OPENAI_API_BASE
-        value: "https://api.openai.com/v1"
-      # Ensure no proxy settings are inherited
-      - key: HTTP_PROXY
-        value: ""
-      - key: HTTPS_PROXY
-        value: ""
     disk:
       name: config
       mountPath: /opt/render/project/src/config

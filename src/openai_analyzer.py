@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import logging
 from openai import OpenAI
-from .api.utils import create_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -14,7 +13,8 @@ class OddsAnalyzer:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            self.client = create_openai_client(api_key)
+            # Simple initialization
+            self.client = OpenAI(api_key=api_key)
             logger.info("OpenAI analyzer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI analyzer: {str(e)}")
@@ -46,9 +46,8 @@ Be conservative in your analysis and only highlight strong value opportunities."
         try:
             analysis_prompt = self._create_analysis_prompt(odds_data)
             
-            # Get match analysis using the new API structure
             response = self.client.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4",  # Use standard GPT-4
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPTS['match_analysis']},
                     {"role": "user", "content": analysis_prompt}
@@ -60,8 +59,7 @@ Be conservative in your analysis and only highlight strong value opportunities."
             return {
                 'timestamp': datetime.now().isoformat(),
                 'analysis': response.choices[0].message.content,
-                'analyzed_matches': len(odds_data),
-                'model_used': 'gpt-4'
+                'analyzed_matches': len(odds_data)
             }
             
         except Exception as e:
