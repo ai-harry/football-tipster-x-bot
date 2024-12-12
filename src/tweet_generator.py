@@ -2,7 +2,7 @@ from datetime import datetime
 import random
 import logging
 from typing import Dict, Optional
-import openai
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,10 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            openai.api_key = api_key
+            # Initialize without any proxy settings
+            self.client = OpenAI(
+                api_key=api_key
+            )
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")
@@ -77,17 +80,21 @@ Example structure:
 "[Greeting] [League] value: [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"
 """
 
-            # Generate tweet using the OpenAI API
-            response = openai.Completion.create(
-                model="gpt-4o",
-                prompt=f"{system_prompt}\n\n{user_prompt}",
+            # Generate tweet using the new OpenAI client structure
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
                 temperature=0.7,
                 max_tokens=150,
                 presence_penalty=0.6,
                 frequency_penalty=0.3
             )
             
-            tweet = response.choices[0].text.strip()
+            # Extract the generated text using the new response structure
+            tweet = response.choices[0].message.content.strip()
             
             # Validate and trim tweet if needed
             if len(tweet) > 280:
