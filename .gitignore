@@ -35,4 +35,9 @@ ENV/
 
 # Project specific
 data/
-analysis/ 
+analysis/
+
+# Configuration
+config/
+*.json
+  

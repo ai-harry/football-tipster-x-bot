@@ -1,13 +1,15 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
 from threading import Thread, Event
 import logging
 import sys
 import os
-from typing import Dict
+from typing import Dict, Optional
 from dotenv import load_dotenv
 
 # Import using relative import
 from ..betting_bot import BettingBot
+from .models import TwitterCredentials, PromptTemplate, PromptUpdateResponse, ConfigResponse
+from .config_manager import ConfigManager
 
 # Configure logging
 logging.basicConfig(
@@ -21,6 +23,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Football Betting Bot API")
+config_manager = ConfigManager()
 
 # Global variables for controlling the automation
 automation_thread: Thread = None
@@ -137,6 +140,79 @@ async def root():
             "docs": "/docs"
         }
     }
+
+@app.post("/configure/twitter-credentials")
+async def configure_twitter_credentials(
+    credentials: TwitterCredentials
+) -> ConfigResponse:
+    """
+    Configure Twitter API credentials for the bot.
+    
+    Example request:    ```
+    {
+        "api_key": "your_api_key",
+        "api_secret": "your_api_secret",
+        "access_token": "your_access_token",
+        "access_token_secret": "your_access_token_secret"
+    }    ```
+    """
+    success = config_manager.set_twitter_credentials(credentials)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to save credentials")
+    
+    return ConfigResponse(
+        success=True,
+        message="Twitter credentials configured successfully"
+    )
+
+@app.get("/configure/prompt")
+async def get_prompt_template() -> PromptUpdateResponse:
+    """Get the current prompt template used for bet analysis."""
+    template = config_manager.get_prompt_template()
+    return PromptUpdateResponse(
+        success=True,
+        message="Current prompt template retrieved",
+        current_template=template
+    )
+
+@app.post("/configure/prompt")
+async def update_prompt_template(
+    prompt: PromptTemplate
+) -> PromptUpdateResponse:
+    """
+    Update the prompt template used for bet analysis.
+    
+    Example request:    ```
+    {
+        "template": "Analyze this bet: {bet_details}\n\nConsider: {analysis_points}"
+    }    ```
+    """
+    success = config_manager.set_prompt_template(prompt)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to update prompt template")
+    
+    return PromptUpdateResponse(
+        success=True,
+        message="Prompt template updated successfully",
+        current_template=prompt.template
+    )
+
+@app.post("/start")
+async def start_automation() -> ConfigResponse:
+    """Start the betting bot automation."""
+    credentials = config_manager.get_twitter_credentials()
+    if not credentials:
+        raise HTTPException(
+            status_code=400,
+            detail="Twitter credentials not configured. Please configure credentials first."
+        )
+    
+    # Your existing automation logic here
+    
+    return ConfigResponse(
+        success=True,
+        message="Automation started successfully"
+    )
 
 if __name__ == "__main__":
     import uvicorn
