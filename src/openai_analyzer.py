@@ -13,10 +13,12 @@ class OddsAnalyzer:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            # Initialize without any proxy settings
             self.client = OpenAI(
-                api_key=api_key
+                api_key=api_key,
+                default_headers={"Content-Type": "application/json"}
             )
+            # Test the connection
+            self.client.models.list()
             logger.info("OpenAI analyzer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI analyzer: {str(e)}")
@@ -48,26 +50,26 @@ Be conservative in your analysis and only highlight strong value opportunities."
         try:
             analysis_prompt = self._create_analysis_prompt(odds_data)
             
-            # Get match analysis using GPT-4
-            match_analysis = self.client.chat.completions.create(
-                model="gpt-4o",  # Updated to GPT-4
+            # Get match analysis using the new API structure
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPTS['match_analysis']},
                     {"role": "user", "content": analysis_prompt}
                 ],
                 temperature=0.2,
-                max_tokens=1000  # Increased for more detailed analysis
+                max_tokens=1000
             )
             
             return {
                 'timestamp': datetime.now().isoformat(),
-                'analysis': match_analysis.choices[0].message.content,
+                'analysis': response.choices[0].message.content,
                 'analyzed_matches': len(odds_data),
-                'model_used': 'gpt-4o'
+                'model_used': 'gpt-4'
             }
             
         except Exception as e:
-            print(f"\n❌ Analysis error: {str(e)}")
+            logger.error(f"Analysis error: {str(e)}")
             return {
                 'timestamp': datetime.now().isoformat(),
                 'analysis': "Unable to analyze due to API error.",

@@ -19,10 +19,12 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            # Initialize without any proxy settings
             self.client = OpenAI(
-                api_key=api_key
+                api_key=api_key,
+                default_headers={"Content-Type": "application/json"}
             )
+            # Test the connection
+            self.client.models.list()
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")
@@ -82,21 +84,17 @@ Example structure:
 
             # Generate tweet using the new OpenAI client structure
             response = self.client.chat.completions.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.7,
-                max_tokens=150,
-                presence_penalty=0.6,
-                frequency_penalty=0.3
+                max_tokens=150
             )
             
-            # Extract the generated text using the new response structure
             tweet = response.choices[0].message.content.strip()
             
-            # Validate and trim tweet if needed
             if len(tweet) > 280:
                 tweet = self._trim_tweet(tweet)
             
