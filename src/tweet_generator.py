@@ -3,6 +3,7 @@ import random
 import logging
 from typing import Dict, Optional
 from openai import OpenAI
+from .api.utils import create_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +20,7 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            self.client = OpenAI(
-                api_key=api_key,
-                default_headers={"Content-Type": "application/json"}
-            )
-            # Test the connection
-            self.client.models.list()
+            self.client = create_openai_client(api_key)
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")

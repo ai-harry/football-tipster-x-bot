@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Dict, List, Optional
 import logging
 from openai import OpenAI
+from .api.utils import create_openai_client
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +14,7 @@ class OddsAnalyzer:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            self.client = OpenAI(
-                api_key=api_key,
-                default_headers={"Content-Type": "application/json"}
-            )
-            # Test the connection
-            self.client.models.list()
+            self.client = create_openai_client(api_key)
             logger.info("OpenAI analyzer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI analyzer: {str(e)}")
