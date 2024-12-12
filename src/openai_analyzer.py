@@ -1,15 +1,23 @@
 import os
 import json
 from datetime import datetime
-from typing import Dict, List
-from openai import OpenAI
+from typing import Dict, List, Optional
+import logging
+import openai
+
+logger = logging.getLogger(__name__)
 
 class OddsAnalyzer:
     """Analyzes football odds data using OpenAI API."""
     
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
-        self.client = OpenAI(api_key=api_key)
+        try:
+            self.client = openai.OpenAI(api_key=api_key)
+            logger.info("OpenAI analyzer initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize OpenAI analyzer: {str(e)}")
+            raise
         
         # System prompts for different analysis types
         self.SYSTEM_PROMPTS = {

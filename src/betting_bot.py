@@ -10,6 +10,7 @@ from src.openai_analyzer import OddsAnalyzer
 from src.tweet_generator import TweetGenerator
 from src.twitter_poster import TwitterPoster
 from dotenv import load_dotenv
+import tweepy
 
 # Configure logging
 logging.basicConfig(
