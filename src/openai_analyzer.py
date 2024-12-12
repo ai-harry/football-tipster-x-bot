@@ -13,10 +13,10 @@ class OddsAnalyzer:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            # Initialize OpenAI client without proxies
+            # Initialize with explicit base URL and no proxies
             self.client = OpenAI(
                 api_key=api_key,
-                timeout=60.0  # Set a reasonable timeout
+                base_url="https://api.openai.com/v1"  # Explicit base URL
             )
             logger.info("OpenAI analyzer initialized successfully")
         except Exception as e:

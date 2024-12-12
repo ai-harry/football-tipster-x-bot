@@ -1,13 +1,13 @@
 from datetime import datetime
 import random
 import logging
-from typing import Dict
+from typing import Dict, Optional
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
 class TweetGenerator:
-    """Generates valuable betting insight tweets."""
+    """Generates tweets from odds analysis using OpenAI."""
     
     LEAGUE_DISPLAY = {
         'soccer_epl': 'Premier League',
@@ -18,7 +18,15 @@ class TweetGenerator:
     
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
-        self.client = OpenAI(api_key=api_key)
+        try:
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.openai.com/v1"
+            )
+            logger.info("Tweet generator initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize tweet generator: {str(e)}")
+            raise
         
     def generate_optimized_tweet(self, data: Dict) -> str:
         """Generate a tweet with specific betting insights."""

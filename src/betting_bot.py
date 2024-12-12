@@ -31,11 +31,19 @@ class BettingBot:
         load_dotenv()
         
         try:
-            self.odds_client = OddsAPIClient(os.getenv('ODDS_API_KEY'))
-            self.analyzer = OddsAnalyzer(os.getenv('OPENAI_API_KEY'))
-            self.tweet_gen = TweetGenerator(os.getenv('OPENAI_API_KEY'))
+            # Get API keys
+            odds_api_key = os.getenv('ODDS_API_KEY')
+            openai_api_key = os.getenv('OPENAI_API_KEY')
             
-            # Initialize Twitter client with error handling
+            if not odds_api_key or not openai_api_key:
+                raise ValueError("Missing required API keys")
+            
+            # Initialize clients without proxy settings
+            self.odds_client = OddsAPIClient(odds_api_key)
+            self.analyzer = OddsAnalyzer(openai_api_key)
+            self.tweet_gen = TweetGenerator(openai_api_key)
+            
+            # Initialize Twitter client
             twitter_api_key = os.getenv('TWITTER_API_KEY')
             twitter_api_secret = os.getenv('TWITTER_API_SECRET')
             twitter_access_token = os.getenv('TWITTER_ACCESS_TOKEN')
