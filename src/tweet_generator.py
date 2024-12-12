@@ -77,8 +77,8 @@ Example structure:
 "[Greeting] [League] value: [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"
 """
 
-            # Generate tweet using GPT-4
-            response = self.client.chat.completions.create(
+            # Generate tweet using GPT-4o
+            response = openai.ChatCompletion.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
