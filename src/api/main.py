@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Football Betting Bot API")
+app = FastAPI(title="Football Betting Bot API", description="API for managing football betting automation and configuration")
 config_manager = ConfigManager()
 
 # Global variables for controlling the automation
@@ -62,93 +62,14 @@ def run_automation():
         automation_status["running"] = False
         logger.info("Automation stopped")
 
-@app.post("/start")
-async def start_automation(background_tasks: BackgroundTasks) -> Dict:
-    """Start the betting automation"""
-    global automation_thread, stop_event
-    
-    if automation_status["running"]:
-        raise HTTPException(status_code=400, detail="Automation is already running")
-    
-    try:
-        # Reset the stop event and status
-        stop_event.clear()
-        automation_status["running"] = True
-        automation_status["last_error"] = None
-        
-        # Start automation in background thread
-        automation_thread = Thread(target=run_automation)
-        automation_thread.start()
-        
-        logger.info("Automation process started")
-        return {"status": "started", "message": "Betting automation started successfully"}
-        
-    except Exception as e:
-        logger.error(f"Failed to start automation: {str(e)}")
-        automation_status["running"] = False
-        automation_status["last_error"] = str(e)
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/stop")
-async def stop_automation() -> Dict:
-    """Stop the betting automation"""
-    global automation_thread, stop_event
-    
-    if not automation_status["running"]:
-        raise HTTPException(status_code=400, detail="Automation is not running")
-    
-    try:
-        # Signal the automation to stop
-        stop_event.set()
-        
-        # Wait for thread to finish
-        if automation_thread and automation_thread.is_alive():
-            automation_thread.join(timeout=30)
-        
-        automation_status["running"] = False
-        logger.info("Automation process stopped")
-        return {"status": "stopped", "message": "Betting automation stopped successfully"}
-        
-    except Exception as e:
-        logger.error(f"Failed to stop automation: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/status")
-async def get_status() -> Dict:
-    """Get current automation status"""
-    return {
-        "running": automation_status["running"],
-        "last_error": automation_status["last_error"]
-    }
-
-@app.get("/health")
-async def health_check() -> Dict:
-    """Health check endpoint"""
-    return {"status": "healthy"}
-
-@app.get("/")
-async def root():
-    """Root endpoint"""
-    return {
-        "message": "Football Betting Bot API",
-        "version": "1.0",
-        "endpoints": {
-            "start": "/start",
-            "stop": "/stop",
-            "status": "/status",
-            "health": "/health",
-            "docs": "/docs"
-        }
-    }
-
-@app.post("/configure/twitter-credentials")
+@app.post("/configure/twitter-credentials", tags=["Configuration"])
 async def configure_twitter_credentials(
     credentials: TwitterCredentials
 ) -> ConfigResponse:
     """
     Configure Twitter API credentials for the bot.
     
-    Example request:    ```
+    Example request:    ```json
     {
         "api_key": "your_api_key",
         "api_secret": "your_api_secret",
@@ -165,7 +86,7 @@ async def configure_twitter_credentials(
         message="Twitter credentials configured successfully"
     )
 
-@app.get("/configure/prompt")
+@app.get("/configure/prompt", tags=["Configuration"])
 async def get_prompt_template() -> PromptUpdateResponse:
     """Get the current prompt template used for bet analysis."""
     template = config_manager.get_prompt_template()
@@ -175,14 +96,14 @@ async def get_prompt_template() -> PromptUpdateResponse:
         current_template=template
     )
 
-@app.post("/configure/prompt")
+@app.post("/configure/prompt", tags=["Configuration"])
 async def update_prompt_template(
     prompt: PromptTemplate
 ) -> PromptUpdateResponse:
     """
     Update the prompt template used for bet analysis.
     
-    Example request:    ```
+    Example request:    ```json
     {
         "template": "Analyze this bet: {bet_details}\n\nConsider: {analysis_points}"
     }    ```
@@ -197,9 +118,20 @@ async def update_prompt_template(
         current_template=prompt.template
     )
 
-@app.post("/start")
-async def start_automation() -> ConfigResponse:
-    """Start the betting bot automation."""
+@app.post("/start", tags=["Automation"])
+async def start_automation(background_tasks: BackgroundTasks) -> ConfigResponse:
+    """
+    Start the betting automation.
+    
+    Requires Twitter credentials to be configured first.
+    """
+    global automation_thread, stop_event
+    
+    # Check if automation is already running
+    if automation_status["running"]:
+        raise HTTPException(status_code=400, detail="Automation is already running")
+    
+    # Check for Twitter credentials
     credentials = config_manager.get_twitter_credentials()
     if not credentials:
         raise HTTPException(
@@ -207,12 +139,84 @@ async def start_automation() -> ConfigResponse:
             detail="Twitter credentials not configured. Please configure credentials first."
         )
     
-    # Your existing automation logic here
+    try:
+        # Reset the stop event and status
+        stop_event.clear()
+        automation_status["running"] = True
+        automation_status["last_error"] = None
+        
+        # Start automation in background thread
+        automation_thread = Thread(target=run_automation)
+        automation_thread.start()
+        
+        logger.info("Automation process started")
+        return ConfigResponse(success=True, message="Betting automation started successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to start automation: {str(e)}")
+        automation_status["running"] = False
+        automation_status["last_error"] = str(e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/stop", tags=["Automation"])
+async def stop_automation() -> ConfigResponse:
+    """Stop the betting automation"""
+    global automation_thread, stop_event
     
-    return ConfigResponse(
-        success=True,
-        message="Automation started successfully"
-    )
+    if not automation_status["running"]:
+        raise HTTPException(status_code=400, detail="Automation is not running")
+    
+    try:
+        # Signal the automation to stop
+        stop_event.set()
+        
+        # Wait for thread to finish
+        if automation_thread and automation_thread.is_alive():
+            automation_thread.join(timeout=30)
+        
+        automation_status["running"] = False
+        logger.info("Automation process stopped")
+        return ConfigResponse(success=True, message="Betting automation stopped successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to stop automation: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/status", tags=["Automation"])
+async def get_status() -> Dict:
+    """Get current automation status"""
+    return {
+        "running": automation_status["running"],
+        "last_error": automation_status["last_error"]
+    }
+
+@app.get("/health", tags=["System"])
+async def health_check() -> Dict:
+    """Health check endpoint"""
+    return {"status": "healthy"}
+
+@app.get("/", tags=["System"])
+async def root():
+    """Root endpoint with API information"""
+    return {
+        "message": "Football Betting Bot API",
+        "version": "1.0",
+        "endpoints": {
+            "configuration": {
+                "twitter_credentials": "/configure/twitter-credentials",
+                "prompt": "/configure/prompt"
+            },
+            "automation": {
+                "start": "/start",
+                "stop": "/stop",
+                "status": "/status"
+            },
+            "system": {
+                "health": "/health",
+                "docs": "/docs"
+            }
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn
