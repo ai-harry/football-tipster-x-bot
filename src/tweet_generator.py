@@ -2,7 +2,7 @@ from datetime import datetime
 import random
 import logging
 from typing import Dict, Optional
-import openai
+from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            openai.api_key = api_key
+            self.client = OpenAI(api_key=api_key)
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")
@@ -77,8 +77,8 @@ Example structure:
 "[Greeting] [League] value: [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"
 """
 
-            # Generate tweet using GPT-4o
-            response = openai.ChatCompletion.create(
+            # Generate tweet using the new OpenAI client
+            response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": system_prompt},
