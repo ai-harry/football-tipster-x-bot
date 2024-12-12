@@ -6,10 +6,11 @@ import os
 from typing import Dict, Optional
 from dotenv import load_dotenv
 
-# Import using relative import
-from ..betting_bot import BettingBot
-from .models import TwitterCredentials, PromptTemplate, PromptUpdateResponse, ConfigResponse
-from .config_manager import ConfigManager
+# Update the import path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+from src.betting_bot import BettingBot
+from src.api.models import TwitterCredentials, PromptTemplate, PromptUpdateResponse, ConfigResponse
+from src.api.config_manager import ConfigManager
 
 # Configure logging
 logging.basicConfig(
