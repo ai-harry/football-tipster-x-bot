@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional
 import logging
-from openai import OpenAI
+import openai
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +13,7 @@ class OddsAnalyzer:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            # Initialize with explicit base URL and no proxies
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.openai.com/v1"  # Explicit base URL
-            )
+            openai.api_key = api_key
             logger.info("OpenAI analyzer initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI analyzer: {str(e)}")

@@ -2,7 +2,7 @@ from datetime import datetime
 import random
 import logging
 from typing import Dict, Optional
-from openai import OpenAI
+import openai
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,7 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.openai.com/v1"
-            )
+            openai.api_key = api_key
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")
