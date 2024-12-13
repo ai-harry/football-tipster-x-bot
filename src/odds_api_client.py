@@ -7,6 +7,7 @@ import socket
 import socks
 from typing import Dict, List, Optional
 import logging
+from cachetools import TTLCache
 
 logger = logging.getLogger(__name__)
 
@@ -15,26 +16,58 @@ class OddsAPIClient:
     
     BASE_URL = "https://api.the-odds-api.com/v4"
     
-    def __init__(self, api_key: str):
-        self.api_key = api_key
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or os.getenv('ODDS_API_KEY')
+        if not self.api_key:
+            raise ValueError("No API key provided")
+            
+        self.cache = TTLCache(maxsize=100, ttl=3600)  # 1 hour cache
+        self.last_request_time = 0
+        self.min_request_interval = 5  # Minimum 5 seconds between requests
+        
+    def _wait_for_rate_limit(self, attempt: int):
+        """Wait with exponential backoff."""
+        sleep_time = min(60, self.min_request_interval * (2 ** attempt))
+        logger.info(f"Rate limiting: waiting {sleep_time:.1f} seconds")
+        time.sleep(sleep_time)
 
     def get_odds(self, sport_key: str, regions: List[str], markets: List[str]) -> Optional[Dict]:
-        """Get odds data for a specific sport."""
+        """Get odds data with caching and rate limiting."""
         try:
-            url = f"{self.BASE_URL}/sports/{sport_key}/odds"
-            params = {
-                'apiKey': self.api_key,
-                'regions': ','.join(regions),
-                'markets': ','.join(markets)
-            }
+            cache_key = f"{sport_key}:{','.join(sorted(regions))}:{','.join(sorted(markets))}"
             
-            response = requests.get(url, params=params)
-            response.raise_for_status()  # Raise exception for bad status codes
+            if cache_key in self.cache:
+                logger.info("Returning cached odds data")
+                return self.cache[cache_key]
             
-            return response.json()
-            
-        except requests.exceptions.RequestException as e:
-            logger.error(f"API request failed for {sport_key}: {str(e)}")
+            attempt = 0
+            while True:
+                self._wait_for_rate_limit(attempt)
+                
+                url = f"{self.BASE_URL}/sports/{sport_key}/odds"
+                params = {
+                    'apiKey': self.api_key,
+                    'regions': ','.join(regions),
+                    'markets': ','.join(markets)
+                }
+                
+                response = requests.get(url, params=params)
+                
+                if response.status_code == 429:
+                    logger.warning("Rate limit hit, retrying with backoff")
+                    attempt += 1
+                    continue
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                self.cache[cache_key] = data
+                logger.info(f"Cached odds data for {cache_key}")
+                
+                return data
+                
+        except Exception as e:
+            logger.error(f"Error fetching odds: {str(e)}")
             return None
     
     def save_odds_data(self, data: List[Dict], filename: str = None) -> None:
