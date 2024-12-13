@@ -98,57 +98,51 @@ class BettingBot:
     def analyze_and_post(self) -> Optional[Dict]:
         """Run the complete analysis and posting process."""
         try:
-            # Check if we can post
-            if not self.can_post_tweet():
-                logger.info("Skipping this run - too soon since last tweet")
-                return None
-
+            current_time = datetime.now()
+            logger.info(f"Starting analysis at {current_time}")
+            
             # Get current matches
             current_matches = self._get_current_matches()
             
             if not current_matches:
-                logger.info("No new matches to analyze")
+                logger.info("No matches found to analyze")
                 return None
             
-            # Filter out previously analyzed matches
+            # Filter out recently analyzed matches (within last hour)
+            cutoff_time = current_time - timedelta(hours=1)
             new_matches = [
                 match for match in current_matches 
-                if match['match_id'] not in self.last_analyzed_matches
+                if match['match_id'] not in self.last_analyzed_matches or
+                self.last_tweet_time < cutoff_time
             ]
             
             if not new_matches:
-                logger.info("All current matches have been analyzed")
+                logger.info("No new matches to analyze")
                 return None
 
-            # Sort by value and get best match
+            # Get best match and post
             best_match = self._get_best_match(new_matches)
+            if best_match:
+                tweet = self.tweet_gen.generate_optimized_tweet(best_match)
+                if tweet:
+                    result = self.twitter.post_tweet(tweet)
+                    if result:
+                        self.last_tweet_time = current_time
+                        self.last_analyzed_matches.add(best_match['match_id'])
+                        logger.info(f"Successfully posted tweet at {current_time}")
+                        
+                        # Schedule next run exactly one hour from now
+                        next_run = current_time + timedelta(hours=1)
+                        logger.info(f"Next analysis scheduled for {next_run}")
+                        
+                        return {
+                            'timestamp': current_time,
+                            'match': best_match,
+                            'tweet': tweet
+                        }
             
-            if not best_match:
-                logger.info("No valuable matches found")
-                return None
-
-            # Generate and post tweet
-            tweet = self.tweet_gen.generate_optimized_tweet(best_match)
-            
-            if tweet:
-                result = self.twitter.post_tweet(tweet)
-                
-                if result:
-                    # Update tracking
-                    self.last_tweet_time = datetime.now()
-                    self.last_analyzed_matches.add(best_match['match_id'])
-                    
-                    logger.info(f"Successfully posted tweet at {self.last_tweet_time}")
-                    logger.info(f"Next scheduled run will be at {schedule.next_run()}")
-                    
-                    return {
-                        'timestamp': self.last_tweet_time,
-                        'match': best_match,
-                        'tweet': tweet
-                    }
-
             return None
-
+            
         except Exception as e:
             logger.error(f"Error in analyze_and_post: {str(e)}")
             return None
@@ -254,34 +248,47 @@ class BettingBot:
     def _calculate_value_score(self, match: Dict) -> float:
         """Calculate a value score for sorting matches."""
         try:
-            odds_variance = self._calculate_odds_variance(match['match_data'])
+            # Ensure we're accessing the match data correctly
+            match_data = match.get('match_data', match)  # Handle both direct match data and wrapped match objects
+            
+            # Calculate odds variance
+            odds_variance = self._calculate_odds_variance(match_data)
+            
+            # Log for debugging
+            logger.info(f"Calculated value score: {odds_variance} for match: {match_data.get('home_team')} vs {match_data.get('away_team')}")
+            
             return odds_variance
             
         except Exception as e:
             logger.error(f"Error calculating value score: {str(e)}")
-            return 0
+            return 0.0
 
     def run_scheduled(self):
         """Run the bot on a schedule."""
         try:
             logger.info("Starting scheduled bot...")
             
-            # Schedule the job to run every 1 hour
-            schedule.every(1).hours.do(self.analyze_and_post)
+            # Schedule the job to run every hour
+            schedule.every().hour.at(":00").do(self.analyze_and_post)
             
             # Run first analysis immediately
+            logger.info("Running initial analysis...")
             self.analyze_and_post()
             
             # Keep the script running
             while True:
                 try:
                     schedule.run_pending()
-                    time.sleep(60)  # Check every minute
                     
+                    # Calculate time until next run
                     next_run = schedule.next_run()
                     if next_run:
                         time_until_next = next_run - datetime.now()
-                        logger.info(f"Scheduler is running... Next run in {time_until_next.seconds//60} minutes")
+                        minutes = time_until_next.seconds // 60
+                        logger.info(f"Next tweet scheduled in {minutes} minutes")
+                    
+                    # Sleep for a minute before checking again
+                    time.sleep(60)
                     
                 except Exception as e:
                     logger.error(f"Schedule iteration error: {str(e)}")
