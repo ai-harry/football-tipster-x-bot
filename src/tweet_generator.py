@@ -36,55 +36,26 @@ class TweetGenerator:
             if not odds_info:
                 return None
                 
-            # Format match details
-            match_details = self._format_match_details(
-                match_data, 
-                sport, 
-                odds_info
-            )
-            
-            # Create prompts
-            system_prompt = """You are an expert football betting analyst sharing valuable insights. Your tweets must:
-
-1. Always include specific teams and exact odds
-2. Highlight the best available odds and clear value opportunities
-3. Include one concrete stat or recent form information
-4. Explain why the odds represent value
-5. Sound natural while being precise and informative
-
-Important: Do not use quotation marks or colons in the tweet.
-
-Avoid:
-- Vague statements about "patterns" or "trends"
-- Generic phrases like "worth watching" or "keep an eye on"
-- Tweets without specific odds or probabilities
-- Marketing-style language or excessive hype
-- Repetitive phrases or structures
-- Using quotation marks or colons"""
-
+            # Create prompts without greetings
             user_prompt = f"""Create a valuable betting insight tweet for this match:
 
-{match_details}
+{self._format_match_details(match_data, sport, odds_info)}
 
 Requirements:
-1. Start with Hey folks or Hi everyone (no colon after greeting)
-2. Mention both teams and the specific league
-3. State the best available odds clearly
-4. Explain the value based on probability comparison
-5. Include one relevant team stat or form info
-6. Add 1-2 relevant hashtags
-7. Keep under 280 characters
-8. Sound like a knowledgeable bettor sharing insights
-9. Do not use any colons or quotation marks
+1. Mention both teams and the specific league
+2. State the best available odds clearly
+3. Explain the value based on probability comparison
+4. Include one relevant team stat or form info
+5. Add 1-2 relevant hashtags
+6. Keep under 280 characters
+7. Sound like a knowledgeable bettor sharing insights
+8. Do not use any colons or quotation marks
+"""
 
-Example structure:
-Hey folks! [League] value [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"""
-
-            # Use older API format
             response = openai.ChatCompletion.create(
-                model="gpt-4",
+                model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": "You are an expert football betting analyst."},
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.7,

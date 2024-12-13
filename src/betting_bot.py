@@ -77,6 +77,8 @@ class BettingBot:
             # Clear the analyzed matches set every 24 hours
             schedule.every(24).hours.do(self.last_analyzed_matches.clear)
             
+            self.recent_tweets = set()  # Track recent tweets
+            
             logger.info("BettingBot initialized successfully")
             logger.info(f"Monitoring {len(self.SUPPORTED_SPORTS)} sports leagues")
             
@@ -268,8 +270,8 @@ class BettingBot:
         try:
             logger.info("Starting scheduled bot...")
             
-            # Schedule the job to run every hour
-            schedule.every().hour.at(":00").do(self.analyze_and_post)
+            # Schedule the job to run every 30 minutes
+            schedule.every(30).minutes.do(self.analyze_and_post)
             
             # Run first analysis immediately
             logger.info("Running initial analysis...")
@@ -279,25 +281,31 @@ class BettingBot:
             while True:
                 try:
                     schedule.run_pending()
-                    
-                    # Calculate time until next run
-                    next_run = schedule.next_run()
-                    if next_run:
-                        time_until_next = next_run - datetime.now()
-                        minutes = time_until_next.seconds // 60
-                        logger.info(f"Next tweet scheduled in {minutes} minutes")
-                    
-                    # Sleep for a minute before checking again
-                    time.sleep(60)
-                    
+                    time.sleep(60)  # Sleep for a minute before checking again
                 except Exception as e:
                     logger.error(f"Schedule iteration error: {str(e)}")
                     time.sleep(300)  # Wait 5 minutes on error
                     continue
-                
         except Exception as e:
             logger.error(f"Critical error in scheduler: {str(e)}")
             raise
+
+    def _analyze_and_post_match(self, match: Dict, detailed_odds: Dict) -> bool:
+        """Analyze a specific match and post if valuable."""
+        try:
+            tweet = self.tweet_gen.generate_optimized_tweet(match)
+            if tweet and tweet not in self.recent_tweets:
+                result = self.twitter.post_tweet(tweet)
+                if result:
+                    self.recent_tweets.add(tweet)
+                    if len(self.recent_tweets) > 10:  # Keep only the last 10 tweets
+                        self.recent_tweets.pop()
+                    logger.info(f"Successfully posted tweet for {match['home_team']} vs {match['away_team']}")
+                    return True
+            return False
+        except Exception as e:
+            logger.error(f"Error analyzing and posting match: {str(e)}")
+            return False
 
 def main():
     """Main function to start the bot."""
