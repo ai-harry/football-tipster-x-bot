@@ -52,19 +52,22 @@ class TweetGenerator:
 4. Explain why the odds represent value
 5. Sound natural while being precise and informative
 
+Important: Do not use quotation marks or colons in the tweet.
+
 Avoid:
 - Vague statements about "patterns" or "trends"
 - Generic phrases like "worth watching" or "keep an eye on"
 - Tweets without specific odds or probabilities
 - Marketing-style language or excessive hype
-- Repetitive phrases or structures"""
+- Repetitive phrases or structures
+- Using quotation marks or colons"""
 
             user_prompt = f"""Create a valuable betting insight tweet for this match:
 
 {match_details}
 
 Requirements:
-1. Start with a brief, natural greeting
+1. Start with Hey folks or Hi everyone (no colon after greeting)
 2. Mention both teams and the specific league
 3. State the best available odds clearly
 4. Explain the value based on probability comparison
@@ -72,10 +75,10 @@ Requirements:
 6. Add 1-2 relevant hashtags
 7. Keep under 280 characters
 8. Sound like a knowledgeable bettor sharing insights
+9. Do not use any colons or quotation marks
 
 Example structure:
-"[Greeting] [League] value: [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"
-"""
+Hey folks! [League] value [Team] @ [odds] vs [Team]. [Specific stat]. Our analysis shows [X]% probability vs implied [Y]%. [Value explanation] #[League] #BettingValue"""
 
             # Use older API format
             response = openai.ChatCompletion.create(
@@ -89,6 +92,9 @@ Example structure:
             )
             
             tweet = response['choices'][0]['message']['content'].strip()
+            
+            # Remove any remaining colons or quotes
+            tweet = tweet.replace('"', '').replace(':', '')
             
             if len(tweet) > 280:
                 tweet = self._trim_tweet(tweet)
