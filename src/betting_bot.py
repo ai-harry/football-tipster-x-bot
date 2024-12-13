@@ -26,6 +26,17 @@ logger = logging.getLogger(__name__)
 class BettingBot:
     """Automated betting analysis and tweet posting bot."""
     
+    # Add supported sports list
+    SUPPORTED_SPORTS = [
+        'soccer_epl',                # English Premier League
+        'soccer_spain_la_liga',      # Spanish La Liga
+        'soccer_germany_bundesliga', # German Bundesliga
+        'soccer_italy_serie_a',      # Italian Serie A
+        'soccer_france_ligue_one',   # French Ligue 1
+        'soccer_uefa_champs_league', # UEFA Champions League
+        'soccer_uefa_europa_league'  # UEFA Europa League
+    ]
+    
     def __init__(self):
         """Initialize the betting bot with all required clients."""
         load_dotenv()
@@ -63,7 +74,11 @@ class BettingBot:
             self.last_tweet_time = None
             self.last_analyzed_matches = set()
             
+            # Clear the analyzed matches set every 24 hours
+            schedule.every(24).hours.do(self.last_analyzed_matches.clear)
+            
             logger.info("BettingBot initialized successfully")
+            logger.info(f"Monitoring {len(self.SUPPORTED_SPORTS)} sports leagues")
             
         except Exception as e:
             logger.error(f"Failed to initialize BettingBot: {str(e)}")
@@ -144,12 +159,14 @@ class BettingBot:
             matches = []
             for sport in self.SUPPORTED_SPORTS:
                 try:
+                    logger.info(f"Fetching odds for {sport}")
                     sport_odds = self.odds_client.get_odds(
                         sport_key=sport,
                         regions=['uk', 'eu'],
                         markets=['h2h', 'totals']
                     )
                     if sport_odds:
+                        logger.info(f"Found {len(sport_odds)} matches for {sport}")
                         for match in sport_odds:
                             match_id = f"{match['home_team']}_{match['away_team']}"
                             matches.append({
@@ -157,9 +174,13 @@ class BettingBot:
                                 'sport': sport,
                                 'match_data': match
                             })
+                    else:
+                        logger.info(f"No matches found for {sport}")
                 except Exception as e:
                     logger.error(f"Error fetching odds for {sport}: {str(e)}")
                     continue
+                
+            logger.info(f"Total matches found across all sports: {len(matches)}")
             return matches
         except Exception as e:
             logger.error(f"Error getting current matches: {str(e)}")
@@ -256,8 +277,11 @@ class BettingBot:
                 try:
                     schedule.run_pending()
                     time.sleep(60)  # Check every minute
-                    logger.info("Scheduler is running... Next run at: " + 
-                              str(schedule.next_run()))
+                    
+                    next_run = schedule.next_run()
+                    if next_run:
+                        time_until_next = next_run - datetime.now()
+                        logger.info(f"Scheduler is running... Next run in {time_until_next.seconds//60} minutes")
                     
                 except Exception as e:
                     logger.error(f"Schedule iteration error: {str(e)}")
