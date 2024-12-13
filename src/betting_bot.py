@@ -85,59 +85,32 @@ class BettingBot:
         try:
             # Check if we can post
             if not self.can_post_tweet():
+                logger.info("Skipping this run - too soon since last tweet")
                 return None
 
-            # Updated sport keys to exact API endpoint names
-            sports = [
-                'soccer_epl',                # English Premier League
-                'soccer_spain_la_liga',      # Spanish La Liga
-                'soccer_germany_bundesliga', # German Bundesliga
-                'soccer_italy_serie_a'       # Italian Serie A
+            # Get current matches
+            current_matches = self._get_current_matches()
+            
+            if not current_matches:
+                logger.info("No new matches to analyze")
+                return None
+            
+            # Filter out previously analyzed matches
+            new_matches = [
+                match for match in current_matches 
+                if match['match_id'] not in self.last_analyzed_matches
             ]
             
-            odds_data = {}
-            valuable_matches = []
-            
-            for sport in sports:
-                try:
-                    sport_odds = self.odds_client.get_odds(
-                        sport_key=sport,
-                        regions=['uk', 'eu'],
-                        markets=['h2h', 'totals']
-                    )
-                    
-                    if sport_odds:
-                        logger.info(f"Successfully fetched odds for {sport}")
-                        # Process matches for this sport
-                        for match in sport_odds:
-                            match_id = f"{match['home_team']}_{match['away_team']}"
-                            
-                            # Skip recently analyzed matches
-                            if match_id in self.last_analyzed_matches:
-                                continue
-                                
-                            # Add to valuable matches if it meets criteria
-                            if self._has_betting_value(match):
-                                valuable_matches.append({
-                                    'match_id': match_id,
-                                    'sport': sport,
-                                    'match_data': match
-                                })
-                                logger.info(f"Found valuable match: {match_id}")
-                    else:
-                        logger.warning(f"No odds data available for {sport}")
-                except Exception as e:
-                    logger.error(f"Error fetching odds for {sport}: {str(e)}")
-                    continue
-
-            if not valuable_matches:
-                logger.info("No valuable betting opportunities found")
+            if not new_matches:
+                logger.info("All current matches have been analyzed")
                 return None
 
-            # Sort matches by value potential and take the best one
-            valuable_matches.sort(key=self._calculate_value_score, reverse=True)
-            best_match = valuable_matches[0]
-            logger.info(f"Selected best match: {best_match['match_id']}")
+            # Sort by value and get best match
+            best_match = self._get_best_match(new_matches)
+            
+            if not best_match:
+                logger.info("No valuable matches found")
+                return None
 
             # Generate and post tweet
             tweet = self.tweet_gen.generate_optimized_tweet(best_match)
@@ -151,6 +124,7 @@ class BettingBot:
                     self.last_analyzed_matches.add(best_match['match_id'])
                     
                     logger.info(f"Successfully posted tweet at {self.last_tweet_time}")
+                    logger.info(f"Next scheduled run will be at {schedule.next_run()}")
                     
                     return {
                         'timestamp': self.last_tweet_time,
@@ -162,6 +136,56 @@ class BettingBot:
 
         except Exception as e:
             logger.error(f"Error in analyze_and_post: {str(e)}")
+            return None
+
+    def _get_current_matches(self) -> List[Dict]:
+        """Get current matches to analyze."""
+        try:
+            matches = []
+            for sport in self.SUPPORTED_SPORTS:
+                try:
+                    sport_odds = self.odds_client.get_odds(
+                        sport_key=sport,
+                        regions=['uk', 'eu'],
+                        markets=['h2h', 'totals']
+                    )
+                    if sport_odds:
+                        for match in sport_odds:
+                            match_id = f"{match['home_team']}_{match['away_team']}"
+                            matches.append({
+                                'match_id': match_id,
+                                'sport': sport,
+                                'match_data': match
+                            })
+                except Exception as e:
+                    logger.error(f"Error fetching odds for {sport}: {str(e)}")
+                    continue
+            return matches
+        except Exception as e:
+            logger.error(f"Error getting current matches: {str(e)}")
+            return []
+
+    def _get_best_match(self, matches: List[Dict]) -> Optional[Dict]:
+        """Get the best match based on value."""
+        try:
+            valuable_matches = [
+                match for match in matches 
+                if self._has_betting_value(match['match_data'])
+            ]
+            
+            if not valuable_matches:
+                return None
+            
+            # Sort by value score
+            valuable_matches.sort(
+                key=lambda x: self._calculate_value_score(x['match_data']), 
+                reverse=True
+            )
+            
+            return valuable_matches[0]
+            
+        except Exception as e:
+            logger.error(f"Error getting best match: {str(e)}")
             return None
 
     def _has_betting_value(self, match: Dict) -> bool:
@@ -218,23 +242,31 @@ class BettingBot:
 
     def run_scheduled(self):
         """Run the bot on a schedule."""
-        logger.info("Starting scheduled bot...")
-        
-        # Schedule the job to run every 1 hour
-        schedule.every(1).hours.do(self.analyze_and_post)
-        
-        # Run first analysis immediately
-        self.analyze_and_post()
-        
-        while True:
-            try:
-                schedule.run_pending()
-                time.sleep(60)  # Check every minute
+        try:
+            logger.info("Starting scheduled bot...")
+            
+            # Schedule the job to run every 1 hour
+            schedule.every(1).hours.do(self.analyze_and_post)
+            
+            # Run first analysis immediately
+            self.analyze_and_post()
+            
+            # Keep the script running
+            while True:
+                try:
+                    schedule.run_pending()
+                    time.sleep(60)  # Check every minute
+                    logger.info("Scheduler is running... Next run at: " + 
+                              str(schedule.next_run()))
+                    
+                except Exception as e:
+                    logger.error(f"Schedule iteration error: {str(e)}")
+                    time.sleep(300)  # Wait 5 minutes on error
+                    continue
                 
-            except Exception as e:
-                logger.error(f"Schedule error: {str(e)}")
-                time.sleep(300)  # Wait 5 minutes on error before retrying
-                continue
+        except Exception as e:
+            logger.error(f"Critical error in scheduler: {str(e)}")
+            raise
 
 def main():
     """Main function to start the bot."""
