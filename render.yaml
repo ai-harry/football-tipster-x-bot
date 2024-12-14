@@ -1,16 +1,12 @@
 services:
   - type: web
-    name: betting-bot-api
+    name: betting-bot
     env: python
-    buildCommand: |
-      python -m pip install --upgrade pip
-      pip install -r requirements.txt --no-cache-dir
-    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.12
-      - key: PORT
-        value: 8000
+        value: 3.11.0
     disk:
       name: config
       mountPath: /opt/render/project/src/config
