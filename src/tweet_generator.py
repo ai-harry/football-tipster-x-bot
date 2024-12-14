@@ -2,7 +2,8 @@ from datetime import datetime
 import random
 import logging
 from typing import Dict, Optional
-import openai  # Changed import
+import openai
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +17,15 @@ class TweetGenerator:
         'soccer_italy_serie_a': 'Serie A'
     }
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str = None):
         """Initialize OpenAI client."""
-        try:
-            openai.api_key = api_key
-            
-            # Hardcoded prompts - no longer configurable via API
-            self.system_prompt = """You are an expert football betting analyst. Create concise, informative tweets about betting opportunities. Focus on odds value and key stats. No greetings or fluff."""
-            
-            self.user_prompt_template = """Create a valuable betting insight tweet for this match:
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        self.client = openai.OpenAI(api_key=self.api_key)
+        
+        # Hardcoded prompts - no longer configurable via API
+        self.system_prompt = """You are an expert football betting analyst. Create concise, informative tweets about betting opportunities. Focus on odds value and key stats. No greetings or fluff."""
+        
+        self.user_prompt_template = """Create a valuable betting insight tweet for this match:
 {match_details}
 
 Requirements:
@@ -37,10 +38,7 @@ Requirements:
 7. Sound like a knowledgeable bettor
 8. Do not use colons or quotation marks"""
 
-            logger.info("Tweet generator initialized successfully")
-        except Exception as e:
-            logger.error(f"Failed to initialize tweet generator: {str(e)}")
-            raise
+        logger.info("Tweet generator initialized successfully")
         
     def generate_optimized_tweet(self, data: Dict) -> str:
         """Generate a tweet with specific betting insights."""
@@ -54,7 +52,7 @@ Requirements:
                 
             match_details = self._format_match_details(match_data, sport, odds_info)
             
-            response = openai.ChatCompletion.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
@@ -64,7 +62,7 @@ Requirements:
                 max_tokens=150
             )
             
-            tweet = response['choices'][0]['message']['content'].strip()
+            tweet = response.choices[0].message.content.strip()
             tweet = tweet.replace('"', '').replace(':', '')
             
             if len(tweet) > 280:

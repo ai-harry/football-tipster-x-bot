@@ -57,7 +57,7 @@ class BettingBot:
             # Initialize clients
             self.odds_client = OddsAPIClient(odds_api_key)
             self.analyzer = OddsAnalyzer(openai_api_key)
-            self.tweet_gen = TweetGenerator(openai_api_key)
+            self.tweet_gen = TweetGenerator()
             self.twitter = TwitterPoster(
                 api_key=twitter_api_key,
                 api_secret=twitter_api_secret,
