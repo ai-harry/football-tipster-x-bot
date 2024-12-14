@@ -3,12 +3,14 @@ import openai
 import logging
 from datetime import datetime
 from src.betting_bot import BettingBot
+import os
 
 logger = logging.getLogger(__name__)
 
 class ChatHandler:
     def __init__(self, bot: BettingBot):
         self.bot = bot
+        self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.functions = [
             {
                 "name": "get_odds",
@@ -70,30 +72,14 @@ class ChatHandler:
 
     async def handle_query(self, query: str) -> str:
         try:
-            # Call GPT to understand the query
-            response = await openai.ChatCompletion.acreate(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a helpful betting assistant that helps users get odds and analyze matches."},
-                    {"role": "user", "content": query}
-                ],
-                functions=self.functions,
-                function_call="auto"
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": query}]
             )
-
-            # Extract the function call
-            function_call = response.choices[0].message.get("function_call")
-            
-            if not function_call:
-                return "I'm not sure how to help with that query. Try asking about odds, matches, or system status."
-
-            # Call the appropriate function
-            result = await self._execute_function(function_call)
-            return result
-
+            return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"Error handling chat query: {str(e)}")
-            return f"Sorry, there was an error processing your request: {str(e)}"
+            logger.error(f"Chat handling error: {str(e)}")
+            return "Failed to process query"
 
     async def _execute_function(self, function_call: Dict) -> str:
         name = function_call["name"]

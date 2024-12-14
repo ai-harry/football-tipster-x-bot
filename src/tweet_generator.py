@@ -40,39 +40,16 @@ Requirements:
 
         logger.info("Tweet generator initialized successfully")
         
-    def generate_optimized_tweet(self, data: Dict) -> str:
-        """Generate a tweet with specific betting insights."""
+    def generate_tweet(self, prompt: str) -> str:
         try:
-            match_data = data['match_data']
-            sport = data['sport']
-            
-            odds_info = self._extract_odds_info(match_data)
-            if not odds_info:
-                return None
-                
-            match_details = self._format_match_details(match_data, sport, odds_info)
-            
             response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": self.system_prompt},
-                    {"role": "user", "content": self.user_prompt_template.format(match_details=match_details)}
-                ],
-                temperature=0.7,
-                max_tokens=150
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}]
             )
-            
-            tweet = response.choices[0].message.content.strip()
-            tweet = tweet.replace('"', '').replace(':', '')
-            
-            if len(tweet) > 280:
-                tweet = self._trim_tweet(tweet)
-            
-            return tweet
-            
+            return response.choices[0].message.content
         except Exception as e:
             logger.error(f"Tweet generation error: {str(e)}")
-            return None
+            return "Failed to generate tweet"
 
     def _extract_odds_info(self, match_data: Dict) -> Dict:
         """Extract and analyze odds from match data."""
