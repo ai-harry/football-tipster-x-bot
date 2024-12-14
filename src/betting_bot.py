@@ -10,6 +10,7 @@ from src.tweet_generator import TweetGenerator
 from src.twitter_poster import TwitterPoster
 from dotenv import load_dotenv
 import tweepy
+import threading
 
 # Configure logging
 logging.basicConfig(
@@ -69,8 +70,8 @@ class BettingBot:
             self.tweeted_matches = {}
             self.recent_tweets = set()
             
-            # Schedule cleanup
-            schedule.every(24).hours.do(self._clear_old_matches)
+            # Start a background thread for cleanup
+            self._start_cleanup_thread()
             
             logger.info("BettingBot initialized successfully")
             logger.info(f"Monitoring {len(self.SUPPORTED_SPORTS)} sports leagues")
@@ -78,6 +79,16 @@ class BettingBot:
         except Exception as e:
             logger.error(f"Failed to initialize BettingBot: {str(e)}")
             raise
+
+    def _start_cleanup_thread(self):
+        """Start a background thread to clean up old matches every 24 hours."""
+        def cleanup_loop():
+            while True:
+                time.sleep(86400)  # 24 hours
+                self._clear_old_matches()
+        
+        cleanup_thread = threading.Thread(target=cleanup_loop, daemon=True)
+        cleanup_thread.start()
 
     def _clear_old_matches(self):
         """Clear matches older than 24 hours."""
