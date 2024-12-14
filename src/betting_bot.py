@@ -73,11 +73,11 @@ class BettingBot:
             # Track timing and content
             self.last_tweet_time = None
             self.last_analyzed_matches = set()
+            self.analyzed_team_pairs = set()
+            self.recent_tweets = set()
             
-            # Clear the analyzed matches set every 24 hours
-            schedule.every(24).hours.do(self.last_analyzed_matches.clear)
-            
-            self.recent_tweets = set()  # Track recent tweets
+            # Clear tracking sets every 24 hours
+            schedule.every(24).hours.do(self._clear_tracking_data)
             
             logger.info("BettingBot initialized successfully")
             logger.info(f"Monitoring {len(self.SUPPORTED_SPORTS)} sports leagues")
@@ -85,6 +85,13 @@ class BettingBot:
         except Exception as e:
             logger.error(f"Failed to initialize BettingBot: {str(e)}")
             raise
+
+    def _clear_tracking_data(self):
+        """Clear tracking data for matches and teams."""
+        self.last_analyzed_matches.clear()
+        self.analyzed_team_pairs.clear()
+        self.recent_tweets.clear()
+        logger.info("Cleared tracking data")
 
     def can_post_tweet(self) -> bool:
         """Check if enough time has passed since last tweet."""
@@ -110,12 +117,11 @@ class BettingBot:
                 logger.info("No matches found to analyze")
                 return None
             
-            # Filter out recently analyzed matches (within last 30 minutes)
-            cutoff_time = current_time - timedelta(minutes=30)
+            # Filter out duplicates and recently analyzed matches
             new_matches = [
                 match for match in current_matches 
-                if match['match_id'] not in self.last_analyzed_matches or
-                self.last_tweet_time < cutoff_time
+                if not self._is_duplicate_match(match) and
+                match['match_id'] not in self.last_analyzed_matches
             ]
             
             if not new_matches:
@@ -126,14 +132,14 @@ class BettingBot:
             best_match = self._get_best_match(new_matches)
             if best_match:
                 tweet = self.tweet_gen.generate_optimized_tweet(best_match)
-                if tweet:
+                if tweet and tweet not in self.recent_tweets:
                     result = self.twitter.post_tweet(tweet)
                     if result:
                         self.last_tweet_time = current_time
                         self.last_analyzed_matches.add(best_match['match_id'])
-                        logger.info(f"Successfully posted tweet at {current_time}")
+                        self.recent_tweets.add(tweet)
+                        logger.info(f"Successfully posted tweet for {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
                         
-                        # Schedule next run in 30 minutes
                         next_run = current_time + timedelta(minutes=30)
                         logger.info(f"Next analysis scheduled for {next_run}")
                         
@@ -299,22 +305,25 @@ class BettingBot:
             logger.error(f"Critical error in scheduler: {str(e)}")
             raise
 
-    def _analyze_and_post_match(self, match: Dict, detailed_odds: Dict) -> bool:
-        """Analyze a specific match and post if valuable."""
+    def _is_duplicate_match(self, match: Dict) -> bool:
+        """Check if this match or team combination has been analyzed recently."""
         try:
-            tweet = self.tweet_gen.generate_optimized_tweet(match)
-            if tweet and tweet not in self.recent_tweets:
-                result = self.twitter.post_tweet(tweet)
-                if result:
-                    self.recent_tweets.add(tweet)
-                    if len(self.recent_tweets) > 10:  # Keep only the last 10 tweets
-                        self.recent_tweets.pop()
-                    logger.info(f"Successfully posted tweet for {match['home_team']} vs {match['away_team']}")
-                    return True
+            home_team = match['match_data']['home_team']
+            away_team = match['match_data']['away_team']
+            team_pair = f"{home_team}-{away_team}"
+            
+            # Check if we've already analyzed this team combination
+            if team_pair in self.analyzed_team_pairs:
+                logger.info(f"Skipping duplicate match: {team_pair}")
+                return True
+                
+            # Add to tracked teams
+            self.analyzed_team_pairs.add(team_pair)
             return False
+            
         except Exception as e:
-            logger.error(f"Error analyzing and posting match: {str(e)}")
-            return False
+            logger.error(f"Error checking duplicate match: {str(e)}")
+            return True
 
 def main():
     """Main function to start the bot."""
