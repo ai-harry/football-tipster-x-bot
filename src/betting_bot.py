@@ -73,11 +73,11 @@ class BettingBot:
             # Track timing and content
             self.last_tweet_time = None
             self.last_analyzed_matches = set()
-            self.analyzed_team_pairs = set()
+            self.tweeted_matches = {}  # New: Store all tweeted matches with timestamps
             self.recent_tweets = set()
             
-            # Clear tracking sets every 24 hours
-            schedule.every(24).hours.do(self._clear_tracking_data)
+            # Clear old matches every 24 hours
+            schedule.every(24).hours.do(self._clear_old_matches)
             
             logger.info("BettingBot initialized successfully")
             logger.info(f"Monitoring {len(self.SUPPORTED_SPORTS)} sports leagues")
@@ -86,12 +86,16 @@ class BettingBot:
             logger.error(f"Failed to initialize BettingBot: {str(e)}")
             raise
 
-    def _clear_tracking_data(self):
-        """Clear tracking data for matches and teams."""
-        self.last_analyzed_matches.clear()
-        self.analyzed_team_pairs.clear()
-        self.recent_tweets.clear()
-        logger.info("Cleared tracking data")
+    def _clear_old_matches(self):
+        """Clear matches older than 24 hours."""
+        current_time = datetime.now()
+        # Keep only matches from last 24 hours
+        self.tweeted_matches = {
+            match_id: timestamp 
+            for match_id, timestamp in self.tweeted_matches.items()
+            if (current_time - timestamp).total_seconds() < 86400  # 24 hours
+        }
+        logger.info(f"Cleared old matches. Currently tracking {len(self.tweeted_matches)} matches")
 
     def can_post_tweet(self) -> bool:
         """Check if enough time has passed since last tweet."""
@@ -99,7 +103,7 @@ class BettingBot:
             return True
         
         time_since_last = datetime.now() - self.last_tweet_time
-        if time_since_last.total_seconds() < 3600:  # 1 hour in seconds (changed from 1800)
+        if time_since_last.total_seconds() < 3600:  # Exactly 1 hour in seconds
             logger.info(f"Only {time_since_last.total_seconds()/60:.1f} minutes since last tweet. Waiting...")
             return False
         return True
@@ -122,29 +126,31 @@ class BettingBot:
                 logger.info("No matches found to analyze")
                 return None
             
-            # Filter out duplicates and recently analyzed matches
+            # Filter out already tweeted matches
             new_matches = [
                 match for match in current_matches 
-                if not self._is_duplicate_match(match) and
-                match['match_id'] not in self.last_analyzed_matches
+                if not self._is_match_already_tweeted(match)
             ]
             
             if not new_matches:
                 logger.info("No new matches to analyze")
                 return None
-
+            
             # Get best match and post
             best_match = self._get_best_match(new_matches)
             if best_match:
                 tweet = self.tweet_gen.generate_optimized_tweet(best_match)
-                if tweet and tweet not in self.recent_tweets:
+                if tweet:
                     result = self.twitter.post_tweet(tweet)
                     if result:
                         self.last_tweet_time = current_time
-                        self.last_analyzed_matches.add(best_match['match_id'])
+                        
+                        # Store the match in tweeted history
+                        match_id = f"{best_match['match_data']['home_team']}-{best_match['match_data']['away_team']}"
+                        self.tweeted_matches[match_id] = current_time
+                        
                         self.recent_tweets.add(tweet)
                         
-                        # Schedule next run exactly one hour from now
                         next_run = current_time + timedelta(hours=1)
                         logger.info(f"=== Successfully posted new tweet ===")
                         logger.info(f"Match: {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
@@ -157,7 +163,7 @@ class BettingBot:
                             'tweet': tweet
                         }
                 else:
-                    logger.info("Tweet already posted or invalid")
+                    logger.info("Failed to generate tweet")
             else:
                 logger.info("No valuable matches found")
             
@@ -292,7 +298,7 @@ class BettingBot:
             logger.info("Running initial analysis...")
             self.analyze_and_post()
             
-            # Schedule to run every hour (changed from 30 minutes)
+            # Schedule to run exactly at the start of every hour
             schedule.every().hour.at(":00").do(self.analyze_and_post)
             
             # Keep the script running
@@ -335,6 +341,24 @@ class BettingBot:
             
         except Exception as e:
             logger.error(f"Error checking duplicate match: {str(e)}")
+            return True
+
+    def _is_match_already_tweeted(self, match: Dict) -> bool:
+        """Check if we've already tweeted about this match."""
+        try:
+            home_team = match['match_data']['home_team']
+            away_team = match['match_data']['away_team']
+            match_id = f"{home_team}-{away_team}"
+            reverse_match_id = f"{away_team}-{home_team}"
+            
+            # Check if either combination exists in tweeted matches
+            if match_id in self.tweeted_matches or reverse_match_id in self.tweeted_matches:
+                logger.info(f"Match already tweeted: {match_id}")
+                return True
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking tweeted match: {str(e)}")
             return True
 
 def main():
