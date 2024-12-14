@@ -19,7 +19,24 @@ class TweetGenerator:
     def __init__(self, api_key: str):
         """Initialize OpenAI client."""
         try:
-            openai.api_key = api_key  # Simple API key setting
+            openai.api_key = api_key
+            
+            # Hardcoded prompts - no longer configurable via API
+            self.system_prompt = """You are an expert football betting analyst. Create concise, informative tweets about betting opportunities. Focus on odds value and key stats. No greetings or fluff."""
+            
+            self.user_prompt_template = """Create a valuable betting insight tweet for this match:
+{match_details}
+
+Requirements:
+1. No greetings or introductions
+2. State the best available odds clearly
+3. Explain the value based on probability comparison
+4. Include one relevant team stat or form info
+5. Add 1-2 relevant hashtags
+6. Keep under 280 characters
+7. Sound like a knowledgeable bettor
+8. Do not use colons or quotation marks"""
+
             logger.info("Tweet generator initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize tweet generator: {str(e)}")
@@ -31,40 +48,23 @@ class TweetGenerator:
             match_data = data['match_data']
             sport = data['sport']
             
-            # Extract odds and calculate probabilities
             odds_info = self._extract_odds_info(match_data)
             if not odds_info:
                 return None
                 
-            # Create prompts without greetings
-            user_prompt = f"""Create a valuable betting insight tweet for this match:
-
-{self._format_match_details(match_data, sport, odds_info)}
-
-Requirements:
-1. Mention both teams and the specific league
-2. State the best available odds clearly
-3. Explain the value based on probability comparison
-4. Include one relevant team stat or form info
-5. Add 1-2 relevant hashtags
-6. Keep under 280 characters
-7. Sound like a knowledgeable bettor sharing insights
-8. Do not use any colons or quotation marks
-"""
-
+            match_details = self._format_match_details(match_data, sport, odds_info)
+            
             response = openai.ChatCompletion.create(
-                model="gpt-4o",
+                model="gpt-4",
                 messages=[
-                    {"role": "system", "content": "You are an expert football betting analyst."},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": self.user_prompt_template.format(match_details=match_details)}
                 ],
                 temperature=0.7,
                 max_tokens=150
             )
             
             tweet = response['choices'][0]['message']['content'].strip()
-            
-            # Remove any remaining colons or quotes
             tweet = tweet.replace('"', '').replace(':', '')
             
             if len(tweet) > 280:

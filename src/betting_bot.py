@@ -42,27 +42,22 @@ class BettingBot:
         load_dotenv()
         
         try:
-            # Get API keys
+            # Get API keys from environment variables
             odds_api_key = os.getenv('ODDS_API_KEY')
             openai_api_key = os.getenv('OPENAI_API_KEY')
-            
-            if not odds_api_key or not openai_api_key:
-                raise ValueError("Missing required API keys")
-            
-            # Initialize clients without proxy settings
-            self.odds_client = OddsAPIClient(odds_api_key)
-            self.analyzer = OddsAnalyzer(openai_api_key)
-            self.tweet_gen = TweetGenerator(openai_api_key)
-            
-            # Initialize Twitter client
             twitter_api_key = os.getenv('TWITTER_API_KEY')
             twitter_api_secret = os.getenv('TWITTER_API_SECRET')
             twitter_access_token = os.getenv('TWITTER_ACCESS_TOKEN')
             twitter_access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
             
-            if not all([twitter_api_key, twitter_api_secret, twitter_access_token, twitter_access_token_secret]):
-                raise ValueError("Missing Twitter credentials")
+            if not all([odds_api_key, openai_api_key, twitter_api_key, twitter_api_secret, 
+                       twitter_access_token, twitter_access_token_secret]):
+                raise ValueError("Missing required environment variables")
             
+            # Initialize clients
+            self.odds_client = OddsAPIClient(odds_api_key)
+            self.analyzer = OddsAnalyzer(openai_api_key)
+            self.tweet_gen = TweetGenerator(openai_api_key)
             self.twitter = TwitterPoster(
                 api_key=twitter_api_key,
                 api_secret=twitter_api_secret,
@@ -70,13 +65,12 @@ class BettingBot:
                 access_token_secret=twitter_access_token_secret
             )
             
-            # Track timing and content
+            # Initialize tracking variables
             self.last_tweet_time = None
-            self.last_analyzed_matches = set()
-            self.tweeted_matches = {}  # New: Store all tweeted matches with timestamps
+            self.tweeted_matches = {}
             self.recent_tweets = set()
             
-            # Clear old matches every 24 hours
+            # Schedule cleanup
             schedule.every(24).hours.do(self._clear_old_matches)
             
             logger.info("BettingBot initialized successfully")
