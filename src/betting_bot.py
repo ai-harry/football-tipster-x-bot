@@ -99,7 +99,7 @@ class BettingBot:
             return True
         
         time_since_last = datetime.now() - self.last_tweet_time
-        if time_since_last.total_seconds() < 1800:  # 30 minutes in seconds
+        if time_since_last.total_seconds() < 3600:  # 1 hour in seconds (changed from 1800)
             logger.info(f"Only {time_since_last.total_seconds()/60:.1f} minutes since last tweet. Waiting...")
             return False
         return True
@@ -144,9 +144,11 @@ class BettingBot:
                         self.last_analyzed_matches.add(best_match['match_id'])
                         self.recent_tweets.add(tweet)
                         
+                        # Schedule next run exactly one hour from now
+                        next_run = current_time + timedelta(hours=1)
                         logger.info(f"=== Successfully posted new tweet ===")
                         logger.info(f"Match: {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
-                        logger.info(f"Next analysis scheduled for: {current_time + timedelta(minutes=30)}")
+                        logger.info(f"Next analysis scheduled for: {next_run}")
                         logger.info("=== Analysis cycle complete ===")
                         
                         return {
@@ -290,8 +292,8 @@ class BettingBot:
             logger.info("Running initial analysis...")
             self.analyze_and_post()
             
-            # Schedule to run every 30 minutes
-            schedule.every(30).minutes.do(self.analyze_and_post)
+            # Schedule to run every hour (changed from 30 minutes)
+            schedule.every().hour.at(":00").do(self.analyze_and_post)
             
             # Keep the script running
             while True:
