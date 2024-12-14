@@ -12,30 +12,36 @@ class ChatHandler:
     def __init__(self, bot: BettingBot):
         self.bot = bot
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.functions = [
+        self.tools = [
             {
-                "name": "get_current_value_bets",
-                "description": "Get current value betting opportunities using real-time odds data",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "min_value_threshold": {
-                            "type": "number",
-                            "description": "Minimum value threshold percentage"
+                "type": "function",
+                "function": {
+                    "name": "get_current_value_bets",
+                    "description": "Get current value betting opportunities using real-time odds data",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "min_value_threshold": {
+                                "type": "number",
+                                "description": "Minimum value threshold percentage"
+                            }
                         }
                     }
                 }
             },
             {
-                "name": "get_live_matches",
-                "description": "Get current live matches and odds",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "league": {
-                            "type": "string",
-                            "description": "League name (optional)",
-                            "enum": ["EPL", "La Liga", "Bundesliga", "Serie A", "Ligue 1"]
+                "type": "function",
+                "function": {
+                    "name": "get_live_matches",
+                    "description": "Get current live matches and odds",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "league": {
+                                "type": "string",
+                                "description": "League name (optional)",
+                                "enum": ["EPL", "La Liga", "Bundesliga", "Serie A", "Ligue 1"]
+                            }
                         }
                     }
                 }
@@ -53,7 +59,7 @@ class ChatHandler:
                     },
                     {"role": "user", "content": query}
                 ],
-                tools=self.functions,
+                tools=self.tools,
                 tool_choice="auto"
             )
 
