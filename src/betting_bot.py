@@ -1,5 +1,4 @@
 import os
-import schedule
 import time
 import logging
 from datetime import datetime, timedelta
@@ -107,11 +106,6 @@ class BettingBot:
         try:
             current_time = datetime.now()
             logger.info(f"=== Starting new analysis cycle at {current_time} ===")
-            
-            # Check if we can post
-            if not self.can_post_tweet():
-                logger.info("Waiting for next cycle due to time restriction")
-                return None
             
             # Get current matches
             current_matches = self._get_current_matches()
@@ -292,24 +286,25 @@ class BettingBot:
             logger.info("Running initial analysis...")
             self.analyze_and_post()
             
-            # Schedule to run exactly at the start of every hour
-            schedule.every().hour.at(":00").do(self.analyze_and_post)
-            
-            # Keep the script running
+            # Instead of using schedule library, use a simple loop with time check
             while True:
                 try:
-                    schedule.run_pending()
+                    current_time = datetime.now()
                     
-                    # Log time until next run
-                    next_run = schedule.next_run()
-                    if next_run:
-                        time_until = (next_run - datetime.now()).total_seconds() / 60
-                        logger.info(f"=== Next scheduled run in {time_until:.1f} minutes ===")
+                    if self.last_tweet_time:
+                        time_since_last = current_time - self.last_tweet_time
+                        minutes_until_next = 60 - (time_since_last.total_seconds() / 60)
+                        
+                        if time_since_last.total_seconds() >= 3600:  # 1 hour in seconds
+                            logger.info("Hour has passed, running new analysis...")
+                            self.analyze_and_post()
+                        else:
+                            logger.info(f"=== Next run in {minutes_until_next:.1f} minutes ===")
                     
                     time.sleep(60)  # Check every minute
                     
                 except Exception as e:
-                    logger.error(f"Schedule iteration error: {str(e)}")
+                    logger.error(f"Error in run loop: {str(e)}")
                     time.sleep(300)  # Wait 5 minutes on error
                     continue
                 
