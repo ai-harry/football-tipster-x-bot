@@ -57,6 +57,8 @@ async def start_automation():
     try:
         if bot is None:
             bot = BettingBot()
+        
+        if chat_handler is None:
             chat_handler = ChatHandler(bot)
         
         # Start the automation
@@ -84,3 +86,12 @@ async def get_status():
         "status": "running" if bot is not None else "stopped",
         "message": "Automation is running" if bot is not None else "Automation is stopped"
     } 
+
+@app.on_event("startup")
+async def startup_event():
+    global bot, chat_handler
+    if bot is None:
+        bot = BettingBot()
+    if chat_handler is None:
+        chat_handler = ChatHandler(bot)
+  
