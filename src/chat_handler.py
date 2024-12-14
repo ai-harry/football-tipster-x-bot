@@ -4,6 +4,7 @@ import logging
 from datetime import datetime
 from src.betting_bot import BettingBot
 import os
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -13,59 +14,30 @@ class ChatHandler:
         self.client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         self.functions = [
             {
-                "name": "get_odds",
-                "description": "Get current betting odds for a team or match",
+                "name": "get_current_value_bets",
+                "description": "Get current value betting opportunities using real-time odds data",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "min_value_threshold": {
+                            "type": "number",
+                            "description": "Minimum value threshold percentage"
+                        }
+                    }
+                }
+            },
+            {
+                "name": "get_live_matches",
+                "description": "Get current live matches and odds",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "league": {
                             "type": "string",
-                            "description": "The league name (EPL, La Liga, etc.)",
-                            "enum": ["EPL", "La Liga", "Bundesliga", "Serie A", "Ligue 1"]
-                        },
-                        "team": {
-                            "type": "string",
-                            "description": "The team name to get odds for"
-                        }
-                    },
-                    "required": ["team"]
-                }
-            },
-            {
-                "name": "analyze_value",
-                "description": "Analyze betting value for a specific match",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "match": {
-                            "type": "string",
-                            "description": "The match to analyze (format: Team1 vs Team2)"
-                        }
-                    },
-                    "required": ["match"]
-                }
-            },
-            {
-                "name": "get_matches",
-                "description": "Get upcoming matches for a league",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "league": {
-                            "type": "string",
-                            "description": "The league name",
+                            "description": "League name (optional)",
                             "enum": ["EPL", "La Liga", "Bundesliga", "Serie A", "Ligue 1"]
                         }
-                    },
-                    "required": ["league"]
-                }
-            },
-            {
-                "name": "system_status",
-                "description": "Check the current status of the betting bot",
-                "parameters": {
-                    "type": "object",
-                    "properties": {}
+                    }
                 }
             }
         ]
@@ -73,78 +45,110 @@ class ChatHandler:
     async def handle_query(self, query: str) -> str:
         try:
             response = self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": "user", "content": query}]
+                model="gpt-4",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "You are a betting analysis assistant. Use the available tools to provide real-time odds and value betting opportunities."
+                    },
+                    {"role": "user", "content": query}
+                ],
+                tools=self.functions,
+                tool_choice="auto"
             )
+
+            tool_call = response.choices[0].message.tool_calls[0] if response.choices[0].message.tool_calls else None
+            
+            if tool_call:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
+                
+                if tool_name == "get_current_value_bets":
+                    result = await self._get_current_value_bets(
+                        min_value_threshold=tool_args.get("min_value_threshold", 5)
+                    )
+                elif tool_name == "get_live_matches":
+                    result = await self._get_live_matches(
+                        league=tool_args.get("league")
+                    )
+                else:
+                    result = "Unknown tool called"
+                
+                return result
+            
             return response.choices[0].message.content
+
         except Exception as e:
             logger.error(f"Chat handling error: {str(e)}")
-            return "Failed to process query"
+            return f"Error processing request: {str(e)}"
 
-    async def _execute_function(self, function_call: Dict) -> str:
-        name = function_call["name"]
-        args = eval(function_call["arguments"])  # Note: Be careful with eval in production
+    async def _get_current_value_bets(self, min_value_threshold: float = 5.0) -> str:
+        try:
+            matches = self.bot._get_current_matches()
+            
+            value_bets = []
+            for match in matches:
+                value_score = self.bot._calculate_value_score(match)
+                if value_score > min_value_threshold:
+                    match_data = match['match_data']
+                    value_bets.append({
+                        'match': f"{match_data['home_team']} vs {match_data['away_team']}",
+                        'league': match['sport'],
+                        'value_score': value_score,
+                        'odds': self._get_best_odds(match_data)
+                    })
+            
+            if not value_bets:
+                return "No value betting opportunities found at this time."
+            
+            response = f"Found {len(value_bets)} value betting opportunities:\n\n"
+            for bet in value_bets:
+                response += f"🎯 {bet['match']} ({bet['league']})\n"
+                response += f"Value Score: {bet['value_score']:.1f}%\n"
+                response += f"Best Odds: {bet['odds']}\n\n"
+            
+            response += f"\nAnalysis based on current odds as of {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            return response
 
-        if name == "get_odds":
-            return await self._get_odds(args.get("league"), args.get("team"))
-        elif name == "analyze_value":
-            return await self._analyze_value(args.get("match"))
-        elif name == "get_matches":
-            return await self._get_matches(args.get("league"))
-        elif name == "system_status":
-            return await self._system_status()
-        else:
-            return "Unknown function called"
+        except Exception as e:
+            logger.error(f"Error getting value bets: {str(e)}")
+            return "Error analyzing value bets"
 
-    async def _get_odds(self, league: Optional[str], team: str) -> str:
-        matches = self.bot._get_current_matches()
-        for match in matches:
-            if team.lower() in match['match_data']['home_team'].lower() or \
-               team.lower() in match['match_data']['away_team'].lower():
-                odds = self._format_match_odds(match['match_data'])
-                return f"Odds for {team}:\n{odds}"
-        return f"No upcoming matches found for {team}"
+    async def _get_live_matches(self, league: Optional[str] = None) -> str:
+        try:
+            matches = self.bot._get_current_matches()
+            
+            if league:
+                matches = [m for m in matches if league.lower() in m['sport'].lower()]
+            
+            if not matches:
+                return f"No live matches found{' for ' + league if league else ''}"
+            
+            response = f"Current matches{' in ' + league if league else ''}:\n\n"
+            
+            for match in matches[:5]:
+                match_data = match['match_data']
+                response += f"⚽ {match_data['home_team']} vs {match_data['away_team']}\n"
+                response += f"League: {match['sport']}\n"
+                response += f"Odds: {self._get_best_odds(match_data)}\n\n"
+            
+            response += f"\nOdds updated as of {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}"
+            return response
 
-    async def _analyze_value(self, match: str) -> str:
-        matches = self.bot._get_current_matches()
-        for m in matches:
-            match_str = f"{m['match_data']['home_team']} vs {m['match_data']['away_team']}"
-            if match.lower() in match_str.lower():
-                value_score = self.bot._calculate_value_score(m)
-                return f"Value analysis for {match_str}:\nValue Score: {value_score:.2f}\n"
-        return f"Match not found: {match}"
+        except Exception as e:
+            logger.error(f"Error getting live matches: {str(e)}")
+            return "Error fetching live matches"
 
-    async def _get_matches(self, league: str) -> str:
-        matches = self.bot._get_current_matches()
-        league_matches = [m for m in matches if league.lower() in m['sport'].lower()]
-        if not league_matches:
-            return f"No upcoming matches found for {league}"
+    def _get_best_odds(self, match_data: Dict) -> str:
+        best_odds = {'home': 0, 'away': 0}
         
-        response = f"Upcoming {league} matches:\n"
-        for match in league_matches[:5]:  # Show first 5 matches
-            response += f"• {match['match_data']['home_team']} vs {match['match_data']['away_team']}\n"
-        return response
-
-    async def _system_status(self) -> str:
-        last_tweet = self.bot.last_tweet_time
-        if not last_tweet:
-            return "System is running but hasn't posted any tweets yet"
-        
-        time_since = datetime.now() - last_tweet
-        next_post = 60 - (time_since.total_seconds() / 60)
-        
-        return (f"System Status:\n"
-                f"• Running: Yes\n"
-                f"• Last Tweet: {last_tweet.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                f"• Next Post In: {next_post:.1f} minutes\n"
-                f"• Tracked Matches: {len(self.bot.tweeted_matches)}")
-
-    def _format_match_odds(self, match: Dict) -> str:
-        odds_str = f"Match: {match['home_team']} vs {match['away_team']}\n"
-        for bookmaker in match.get('bookmakers', [])[:1]:  # Show first bookmaker
-            odds_str += f"Bookmaker: {bookmaker['title']}\n"
+        for bookmaker in match_data.get('bookmakers', []):
             for market in bookmaker.get('markets', []):
                 if market['key'] == 'h2h':
                     for outcome in market['outcomes']:
-                        odds_str += f"• {outcome['name']}: {outcome['price']:.2f}\n"
-        return odds_str 
+                        if outcome['name'] == match_data['home_team']:
+                            best_odds['home'] = max(best_odds['home'], outcome['price'])
+                        elif outcome['name'] == match_data['away_team']:
+                            best_odds['away'] = max(best_odds['away'], outcome['price'])
+        
+        return f"Home: {best_odds['home']:.2f}, Away: {best_odds['away']:.2f}"
