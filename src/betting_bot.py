@@ -90,9 +90,9 @@ class BettingBot:
         """Check if enough time has passed since last tweet."""
         if not self.last_tweet_time:
             return True
-            
+        
         time_since_last = datetime.now() - self.last_tweet_time
-        if time_since_last.total_seconds() < 3600:  # 1 hour in seconds
+        if time_since_last.total_seconds() < 1800:  # 30 minutes in seconds
             logger.info(f"Only {time_since_last.total_seconds()/60:.1f} minutes since last tweet. Waiting...")
             return False
         return True
@@ -110,8 +110,8 @@ class BettingBot:
                 logger.info("No matches found to analyze")
                 return None
             
-            # Filter out recently analyzed matches (within last hour)
-            cutoff_time = current_time - timedelta(hours=1)
+            # Filter out recently analyzed matches (within last 30 minutes)
+            cutoff_time = current_time - timedelta(minutes=30)
             new_matches = [
                 match for match in current_matches 
                 if match['match_id'] not in self.last_analyzed_matches or
@@ -133,8 +133,8 @@ class BettingBot:
                         self.last_analyzed_matches.add(best_match['match_id'])
                         logger.info(f"Successfully posted tweet at {current_time}")
                         
-                        # Schedule next run exactly one hour from now
-                        next_run = current_time + timedelta(hours=1)
+                        # Schedule next run in 30 minutes
+                        next_run = current_time + timedelta(minutes=30)
                         logger.info(f"Next analysis scheduled for {next_run}")
                         
                         return {
@@ -270,22 +270,31 @@ class BettingBot:
         try:
             logger.info("Starting scheduled bot...")
             
-            # Schedule the job to run every 30 minutes
-            schedule.every(30).minutes.do(self.analyze_and_post)
-            
             # Run first analysis immediately
             logger.info("Running initial analysis...")
             self.analyze_and_post()
+            
+            # Schedule to run every 30 minutes
+            schedule.every(30).minutes.do(self.analyze_and_post)
             
             # Keep the script running
             while True:
                 try:
                     schedule.run_pending()
-                    time.sleep(60)  # Sleep for a minute before checking again
+                    
+                    # Log time until next run
+                    next_run = schedule.next_run()
+                    if next_run:
+                        time_until = (next_run - datetime.now()).total_seconds() / 60
+                        logger.info(f"Next run in {time_until:.1f} minutes")
+                    
+                    time.sleep(60)  # Check every minute
+                    
                 except Exception as e:
                     logger.error(f"Schedule iteration error: {str(e)}")
                     time.sleep(300)  # Wait 5 minutes on error
                     continue
+                
         except Exception as e:
             logger.error(f"Critical error in scheduler: {str(e)}")
             raise
