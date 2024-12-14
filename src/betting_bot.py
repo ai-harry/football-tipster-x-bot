@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('betting_bot.log'),
+        logging.FileHandler('betting_bot.log', mode='w'),
         logging.StreamHandler()
     ]
 )
@@ -108,7 +108,12 @@ class BettingBot:
         """Run the complete analysis and posting process."""
         try:
             current_time = datetime.now()
-            logger.info(f"Starting analysis at {current_time}")
+            logger.info(f"=== Starting new analysis cycle at {current_time} ===")
+            
+            # Check if we can post
+            if not self.can_post_tweet():
+                logger.info("Waiting for next cycle due to time restriction")
+                return None
             
             # Get current matches
             current_matches = self._get_current_matches()
@@ -138,16 +143,21 @@ class BettingBot:
                         self.last_tweet_time = current_time
                         self.last_analyzed_matches.add(best_match['match_id'])
                         self.recent_tweets.add(tweet)
-                        logger.info(f"Successfully posted tweet for {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
                         
-                        next_run = current_time + timedelta(minutes=30)
-                        logger.info(f"Next analysis scheduled for {next_run}")
+                        logger.info(f"=== Successfully posted new tweet ===")
+                        logger.info(f"Match: {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
+                        logger.info(f"Next analysis scheduled for: {current_time + timedelta(minutes=30)}")
+                        logger.info("=== Analysis cycle complete ===")
                         
                         return {
                             'timestamp': current_time,
                             'match': best_match,
                             'tweet': tweet
                         }
+                else:
+                    logger.info("Tweet already posted or invalid")
+            else:
+                logger.info("No valuable matches found")
             
             return None
             
@@ -274,7 +284,7 @@ class BettingBot:
     def run_scheduled(self):
         """Run the bot on a schedule."""
         try:
-            logger.info("Starting scheduled bot...")
+            logger.info("=== Starting scheduled bot ===")
             
             # Run first analysis immediately
             logger.info("Running initial analysis...")
@@ -292,7 +302,7 @@ class BettingBot:
                     next_run = schedule.next_run()
                     if next_run:
                         time_until = (next_run - datetime.now()).total_seconds() / 60
-                        logger.info(f"Next run in {time_until:.1f} minutes")
+                        logger.info(f"=== Next scheduled run in {time_until:.1f} minutes ===")
                     
                     time.sleep(60)  # Check every minute
                     
