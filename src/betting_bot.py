@@ -311,17 +311,24 @@ class BettingBot:
                             self.analyze_and_post()
                         else:
                             logger.info(f"=== Next run in {minutes_until_next:.1f} minutes ===")
+                    else:
+                        # If no last tweet time, post immediately
+                        logger.info("No previous tweet found, posting now...")
+                        self.analyze_and_post()
                     
                     time.sleep(60)  # Check every minute
                     
                 except Exception as e:
                     logger.error(f"Error in run loop: {str(e)}")
+                    # Don't exit the loop on error, just log and continue
                     time.sleep(300)  # Wait 5 minutes on error
                     continue
                 
         except Exception as e:
             logger.error(f"Critical error in scheduler: {str(e)}")
-            raise
+            # Don't raise the exception, try to recover
+            time.sleep(300)  # Wait 5 minutes
+            self.run_scheduled()  # Restart the scheduler
 
     def _is_duplicate_match(self, match: Dict) -> bool:
         """Check if this match or team combination has been analyzed recently."""

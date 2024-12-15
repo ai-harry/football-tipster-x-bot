@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict
 from src.betting_bot import BettingBot
@@ -51,18 +51,16 @@ async def chat(query: ChatQuery):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/start")
-async def start_automation():
+async def start_automation(background_tasks: BackgroundTasks):
     """Start the betting automation."""
     global bot, chat_handler
     try:
         if bot is None:
             bot = BettingBot()
-        
-        if chat_handler is None:
             chat_handler = ChatHandler(bot)
         
-        # Start the automation
-        bot.run_scheduled()
+        # Run the automation in a background task
+        background_tasks.add_task(bot.run_scheduled)
         return {"status": "success", "message": "Automation process started"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
