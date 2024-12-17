@@ -163,3 +163,10 @@ class TwitterPoster:
             self.tweets_posted_today = 0
             self.daily_reset_time = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
             self._schedule_next_tweet()
+
+    def get_next_tweet_time(self) -> datetime:
+        """Get the next scheduled tweet time."""
+        if not self.next_scheduled_time:
+            self._schedule_next_tweet()
+        
+        return self.next_scheduled_time

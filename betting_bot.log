@@ -1,89 +1,46 @@
-2024-12-17 17:09:21,274 - INFO - Successfully resolved api.the-odds-api.com
-2024-12-17 17:09:23,899 - INFO - Successfully connected to The Odds API
-2024-12-17 17:09:23,900 - INFO - OpenAI analyzer initialized successfully
-2024-12-17 17:09:24,234 - INFO - Tweet generator initialized successfully
-2024-12-17 17:09:27,308 - INFO - Twitter credentials verified successfully
-2024-12-17 17:09:27,308 - INFO - Twitter client initialized successfully. Will post 17 tweets per day
-2024-12-17 17:09:27,308 - INFO - Tweet interval: 84 minutes
-2024-12-17 17:09:27,308 - INFO - BettingBot initialized successfully
-2024-12-17 17:09:27,312 - INFO - Monitoring 7 sports leagues
-2024-12-17 17:09:56,155 - INFO - === Starting scheduled bot ===
-2024-12-17 17:09:56,163 - INFO - Fetching odds for soccer_epl
-2024-12-17 17:09:56,163 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_epl/odds
-2024-12-17 17:09:56,616 - INFO - Successfully fetched odds for soccer_epl
-2024-12-17 17:09:56,616 - INFO - Found 3 matches for soccer_epl
-2024-12-17 17:10:01,621 - INFO - Fetching odds for soccer_spain_la_liga
-2024-12-17 17:10:01,621 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_spain_la_liga/odds
-2024-12-17 17:10:02,068 - INFO - Successfully fetched odds for soccer_spain_la_liga
-2024-12-17 17:10:02,068 - INFO - Found 3 matches for soccer_spain_la_liga
-2024-12-17 17:10:07,075 - INFO - Fetching odds for soccer_germany_bundesliga
-2024-12-17 17:10:07,076 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_germany_bundesliga/odds
-2024-12-17 17:10:07,719 - INFO - Successfully fetched odds for soccer_germany_bundesliga
-2024-12-17 17:10:07,719 - INFO - Found 3 matches for soccer_germany_bundesliga
-2024-12-17 17:10:12,723 - INFO - Fetching odds for soccer_italy_serie_a
-2024-12-17 17:10:12,723 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_italy_serie_a/odds
-2024-12-17 17:10:13,199 - INFO - Successfully fetched odds for soccer_italy_serie_a
-2024-12-17 17:10:13,199 - INFO - Found 3 matches for soccer_italy_serie_a
-2024-12-17 17:10:18,202 - INFO - Fetching odds for soccer_france_ligue_one
-2024-12-17 17:10:18,202 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_france_ligue_one/odds
-2024-12-17 17:10:18,594 - INFO - Successfully fetched odds for soccer_france_ligue_one
-2024-12-17 17:10:18,594 - INFO - Found 3 matches for soccer_france_ligue_one
-2024-12-17 17:10:23,598 - INFO - Fetching odds for soccer_uefa_champs_league
-2024-12-17 17:10:23,599 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_champs_league/odds
-2024-12-17 17:10:24,007 - INFO - Successfully fetched odds for soccer_uefa_champs_league
-2024-12-17 17:10:24,007 - INFO - Found 3 matches for soccer_uefa_champs_league
-2024-12-17 17:10:29,013 - INFO - Fetching odds for soccer_uefa_europa_league
-2024-12-17 17:10:29,013 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_europa_league/odds
-2024-12-17 17:10:29,527 - INFO - Successfully fetched odds for soccer_uefa_europa_league
-2024-12-17 17:10:29,535 - INFO - Found 3 matches for soccer_uefa_europa_league
-2024-12-17 17:10:34,539 - INFO - Total matches found across all sports: 21
-2024-12-17 17:10:40,882 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2024-12-17 17:10:40,890 - INFO - Generated tweet: Aston Villa vs Manchester City EPL face-off. Best odds - Home 3.44 (29.1% chance), Draw 3.85 (26% chance), Away 2.20 (45.5% chance). Draw at 3.85 offers high return potential. Man City's last 5 games: 4W, 1L. Consider draw for value bet. #EPLBetting #ValueBet #FootballBetting
-2024-12-17 17:10:42,548 - INFO - Tweet posted successfully via v2 API. Tweet ID: 1868992209707536764
-2024-12-17 17:10:42,549 - INFO - Tweet posted successfully. 16 tweets remaining today
-2024-12-17 17:10:42,549 - INFO - Next tweet window opens at: 18:34:42
-2024-12-17 17:10:42,550 - INFO - Successfully tweeted about match: Aston Villa-Manchester City
-2024-12-17 17:12:35,890 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
-2024-12-17 17:12:35,890 - INFO - Fetching odds for soccer_epl
-2024-12-17 17:12:35,890 - INFO - Returning cached odds data
-2024-12-17 17:12:35,890 - INFO - Found 3 matches for soccer_epl
-2024-12-17 17:12:40,898 - INFO - Fetching odds for soccer_spain_la_liga
-2024-12-17 17:12:40,898 - INFO - Returning cached odds data
-2024-12-17 17:12:40,898 - INFO - Found 3 matches for soccer_spain_la_liga
-2024-12-17 17:12:45,903 - INFO - Fetching odds for soccer_germany_bundesliga
-2024-12-17 17:12:45,904 - INFO - Returning cached odds data
-2024-12-17 17:12:45,905 - INFO - Found 3 matches for soccer_germany_bundesliga
-2024-12-17 17:12:50,909 - INFO - Fetching odds for soccer_italy_serie_a
-2024-12-17 17:12:50,909 - INFO - Returning cached odds data
-2024-12-17 17:12:50,909 - INFO - Found 3 matches for soccer_italy_serie_a
-2024-12-17 17:12:55,914 - INFO - Fetching odds for soccer_france_ligue_one
-2024-12-17 17:12:55,914 - INFO - Returning cached odds data
-2024-12-17 17:12:55,914 - INFO - Found 3 matches for soccer_france_ligue_one
-2024-12-17 17:13:00,917 - INFO - Fetching odds for soccer_uefa_champs_league
-2024-12-17 17:13:00,919 - INFO - Returning cached odds data
-2024-12-17 17:13:00,919 - INFO - Found 3 matches for soccer_uefa_champs_league
-2024-12-17 17:13:05,924 - INFO - Fetching odds for soccer_uefa_europa_league
-2024-12-17 17:13:05,924 - INFO - Returning cached odds data
-2024-12-17 17:13:05,924 - INFO - Found 3 matches for soccer_uefa_europa_league
-2024-12-17 17:13:10,929 - INFO - Total matches found across all sports: 21
-2024-12-17 17:13:10,929 - INFO - Calculated value score: 1.9400000000000002 for match: Aston Villa vs Manchester City
-2024-12-17 17:13:10,929 - INFO - Calculated value score: 1.5699999999999998 for match: Brentford vs Nottingham Forest
-2024-12-17 17:13:10,929 - INFO - Calculated value score: 1.87 for match: West Ham United vs Brighton and Hove Albion
-2024-12-17 17:13:10,929 - INFO - Calculated value score: 0.6699999999999999 for match: Espanyol vs Valencia
-2024-12-17 17:13:10,935 - INFO - Calculated value score: 3.08 for match: Villarreal vs Rayo Vallecano
-2024-12-17 17:13:10,935 - INFO - Calculated value score: 6.4399999999999995 for match: Girona vs Valladolid
-2024-12-17 17:13:10,937 - INFO - Calculated value score: 7.8100000000000005 for match: Bayern Munich vs RB Leipzig
-2024-12-17 17:13:10,937 - INFO - Calculated value score: 1.3399999999999999 for match: Holstein Kiel vs Augsburg
-2024-12-17 17:13:10,937 - INFO - Calculated value score: 1.83 for match: TSG Hoffenheim vs Borussia Monchengladbach
-2024-12-17 17:13:10,937 - INFO - Calculated value score: 4.4 for match: Hellas Verona vs AC Milan
-2024-12-17 17:13:10,937 - INFO - Calculated value score: 1.0 for match: Torino vs Bologna
-2024-12-17 17:13:10,942 - INFO - Calculated value score: 4.6899999999999995 for match: Genoa vs Napoli
-2024-12-17 17:13:10,944 - INFO - Calculated value score: 2.3499999999999996 for match: AS Monaco vs Paris Saint Germain
-2024-12-17 17:13:10,944 - INFO - Calculated value score: 1.6 for match: Nice vs Rennes
-2024-12-17 17:13:10,946 - INFO - Calculated value score: 1.67 for match: Saint Etienne vs Stade de Reims
-2024-12-17 17:13:10,946 - INFO - Calculated value score: 1.5099999999999998 for match: Monaco vs Aston Villa
-2024-12-17 17:13:10,948 - INFO - Calculated value score: 10.79 for match: Atalanta vs SK Sturm Graz
-2024-12-17 17:13:10,948 - INFO - Calculated value score: 1.06 for match: Atlético Madrid vs Bayer Leverkusen
-2024-12-17 17:13:10,951 - INFO - Calculated value score: 14.35 for match: Galatasaray vs Dynamo Kyiv
-2024-12-17 17:13:10,951 - INFO - Calculated value score: 1.9200000000000002 for match: Besiktas JK vs Athletic Bilbao
-2024-12-17 17:13:10,951 - INFO - Calculated value score: 1.29 for match: AZ Alkmaar vs Roma
+2024-12-17 17:44:47,044 - INFO - Successfully resolved api.the-odds-api.com
+2024-12-17 17:44:48,777 - INFO - Successfully connected to The Odds API
+2024-12-17 17:44:48,777 - INFO - OpenAI analyzer initialized successfully
+2024-12-17 17:44:49,118 - INFO - Tweet generator initialized successfully
+2024-12-17 17:44:52,397 - INFO - Twitter credentials verified successfully
+2024-12-17 17:44:52,400 - INFO - Twitter client initialized successfully. Will post 17 tweets per day
+2024-12-17 17:44:52,400 - INFO - Tweet interval: 84 minutes
+2024-12-17 17:44:52,400 - INFO - First tweet scheduled for: 17:44:52
+2024-12-17 17:44:52,400 - INFO - BettingBot initialized successfully
+2024-12-17 17:44:52,400 - INFO - Monitoring 7 sports leagues
+2024-12-17 17:45:11,708 - INFO - Starting automated betting bot
+2024-12-17 17:45:11,710 - INFO - Fetching odds for soccer_epl
+2024-12-17 17:45:11,711 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_epl/odds
+2024-12-17 17:45:12,341 - INFO - Successfully fetched odds for soccer_epl
+2024-12-17 17:45:12,344 - INFO - Found 3 matches for soccer_epl
+2024-12-17 17:45:17,348 - INFO - Fetching odds for soccer_spain_la_liga
+2024-12-17 17:45:17,348 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_spain_la_liga/odds
+2024-12-17 17:45:17,994 - INFO - Successfully fetched odds for soccer_spain_la_liga
+2024-12-17 17:45:17,994 - INFO - Found 3 matches for soccer_spain_la_liga
+2024-12-17 17:45:22,997 - INFO - Fetching odds for soccer_germany_bundesliga
+2024-12-17 17:45:22,997 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_germany_bundesliga/odds
+2024-12-17 17:45:23,416 - INFO - Successfully fetched odds for soccer_germany_bundesliga
+2024-12-17 17:45:23,418 - INFO - Found 3 matches for soccer_germany_bundesliga
+2024-12-17 17:45:28,420 - INFO - Fetching odds for soccer_italy_serie_a
+2024-12-17 17:45:28,420 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_italy_serie_a/odds
+2024-12-17 17:45:28,891 - INFO - Successfully fetched odds for soccer_italy_serie_a
+2024-12-17 17:45:28,899 - INFO - Found 3 matches for soccer_italy_serie_a
+2024-12-17 17:45:33,901 - INFO - Fetching odds for soccer_france_ligue_one
+2024-12-17 17:45:33,901 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_france_ligue_one/odds
+2024-12-17 17:45:34,326 - INFO - Successfully fetched odds for soccer_france_ligue_one
+2024-12-17 17:45:34,326 - INFO - Found 3 matches for soccer_france_ligue_one
+2024-12-17 17:45:39,331 - INFO - Fetching odds for soccer_uefa_champs_league
+2024-12-17 17:45:39,332 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_champs_league/odds
+2024-12-17 17:45:39,697 - INFO - Successfully fetched odds for soccer_uefa_champs_league
+2024-12-17 17:45:39,697 - INFO - Found 3 matches for soccer_uefa_champs_league
+2024-12-17 17:45:44,705 - INFO - Fetching odds for soccer_uefa_europa_league
+2024-12-17 17:45:44,705 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_europa_league/odds
+2024-12-17 17:45:45,347 - INFO - Successfully fetched odds for soccer_uefa_europa_league
+2024-12-17 17:45:45,355 - INFO - Found 3 matches for soccer_uefa_europa_league
+2024-12-17 17:45:50,359 - INFO - Total matches found across all sports: 21
+2024-12-17 17:45:56,053 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2024-12-17 17:45:56,065 - INFO - Generated tweet: #EPLMatchday Aston Villa vs Man City. Available odds - Aston Villa: 3.44 (29.1%), Draw: 3.85 (26.0%), Man City: 2.20 (45.5%). High potential at 3.85, despite lower probability. Villa's recent form shows potential upset. Recommendation: Bet on draw. #footballbetting #sportsbett...
+2024-12-17 17:45:57,658 - INFO - Tweet posted successfully via v2 API. Tweet ID: 1869001081428021313
+2024-12-17 17:45:57,658 - INFO - Tweet posted successfully. 16 tweets remaining today
+2024-12-17 17:45:57,658 - INFO - Next tweet scheduled for: 19:09:57
+2024-12-17 17:45:57,658 - INFO - Successfully tweeted about match: Aston Villa-Manchester City
