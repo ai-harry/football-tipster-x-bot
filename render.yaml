@@ -3,13 +3,21 @@ services:
     name: betting-bot
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn wsgi:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
-    disk:
-      name: config
-      mountPath: /opt/render/project/src/config
-      sizeGB: 1
+      - key: ODDS_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: TWITTER_API_KEY
+        sync: false
+      - key: TWITTER_API_SECRET
+        sync: false
+      - key: TWITTER_ACCESS_TOKEN
+        sync: false
+      - key: TWITTER_ACCESS_TOKEN_SECRET
+        sync: false
     healthCheckPath: /health
     autoDeploy: true

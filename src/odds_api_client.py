@@ -8,6 +8,8 @@ import socks
 from typing import Dict, List, Optional
 import logging
 from cachetools import TTLCache
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +25,52 @@ class OddsAPIClient:
             
         self.cache = TTLCache(maxsize=100, ttl=3600)  # 1 hour cache
         self.last_request_time = 0
-        self.min_request_interval = 5  # Minimum 5 seconds between requests
+        self.MIN_REQUEST_INTERVAL = 5  # 5 seconds between requests
         
+        # Configure session with retries
+        self.session = requests.Session()
+        retries = Retry(
+            total=5,  # Total number of retries
+            backoff_factor=1,  # Wait 1, 2, 4, 8, 16 seconds between retries
+            status_forcelist=[408, 429, 500, 502, 503, 504],  # Retry on these status codes
+            allowed_methods=["GET"]  # Only retry on GET requests
+        )
+        self.session.mount('https://', HTTPAdapter(max_retries=retries))
+        
+        # Test connection on initialization
+        self._test_connection()
+        
+    def _test_connection(self):
+        """Test the connection to the API."""
+        try:
+            # Try to resolve the hostname
+            socket.gethostbyname('api.the-odds-api.com')
+            logger.info("Successfully resolved api.the-odds-api.com")
+            
+            # Test the API connection
+            response = self.session.get(f"{self.BASE_URL}/sports", 
+                                      params={'apiKey': self.api_key},
+                                      timeout=10)
+            response.raise_for_status()
+            logger.info("Successfully connected to The Odds API")
+            
+        except socket.gaierror as e:
+            logger.error(f"DNS resolution failed: {str(e)}")
+            logger.info("Checking system DNS settings...")
+            # Log DNS servers for debugging
+            try:
+                import dns.resolver
+                dns_servers = dns.resolver.get_default_resolver().nameservers
+                logger.info(f"System DNS servers: {dns_servers}")
+            except:
+                logger.warning("Could not retrieve DNS server information")
+                
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API connection test failed: {str(e)}")
+            
     def _wait_for_rate_limit(self, attempt: int):
         """Wait with exponential backoff."""
-        sleep_time = min(60, self.min_request_interval * (2 ** attempt))
+        sleep_time = min(60, self.MIN_REQUEST_INTERVAL * (2 ** attempt))
         logger.info(f"Rate limiting: waiting {sleep_time:.1f} seconds")
         time.sleep(sleep_time)
 
@@ -40,33 +83,44 @@ class OddsAPIClient:
                 logger.info("Returning cached odds data")
                 return self.cache[cache_key]
             
-            attempt = 0
-            while True:
-                self._wait_for_rate_limit(attempt)
+            url = f"{self.BASE_URL}/sports/{sport_key}/odds"
+            params = {
+                'apiKey': self.api_key,
+                'regions': ','.join(regions),
+                'markets': ','.join(markets)
+            }
+            
+            # Log the request URL (without API key)
+            safe_url = url.replace(self.api_key, 'XXXXX')
+            logger.info(f"Requesting odds from: {safe_url}")
+            
+            # Ensure minimum interval between requests
+            current_time = time.time()
+            time_since_last = current_time - self.last_request_time
+            if time_since_last < self.MIN_REQUEST_INTERVAL:
+                sleep_time = self.MIN_REQUEST_INTERVAL - time_since_last
+                logger.info(f"Rate limiting: waiting {sleep_time:.1f} seconds")
+                time.sleep(sleep_time)
+            
+            response = self.session.get(url, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            self.cache[cache_key] = data
+            logger.info(f"Successfully fetched odds for {sport_key}")
+            
+            return data
                 
-                url = f"{self.BASE_URL}/sports/{sport_key}/odds"
-                params = {
-                    'apiKey': self.api_key,
-                    'regions': ','.join(regions),
-                    'markets': ','.join(markets)
-                }
-                
-                response = requests.get(url, params=params)
-                
-                if response.status_code == 429:
-                    logger.warning("Rate limit hit, retrying with backoff")
-                    attempt += 1
-                    continue
-                
-                response.raise_for_status()
-                data = response.json()
-                
-                self.cache[cache_key] = data
-                logger.info(f"Cached odds data for {cache_key}")
-                
-                return data
-                
-        except Exception as e:
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"Connection error: {str(e)}")
+            logger.info("Please check your internet connection and DNS settings")
+            return None
+            
+        except requests.exceptions.Timeout as e:
+            logger.error(f"Request timed out: {str(e)}")
+            return None
+            
+        except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching odds: {str(e)}")
             return None
     

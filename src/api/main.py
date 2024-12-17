@@ -89,7 +89,8 @@ async def get_status():
 async def startup_event():
     global bot, chat_handler
     if bot is None:
-        bot = BettingBot()
+        # Initialize with test_mode=False for production
+        bot = BettingBot(test_mode=False)
     if chat_handler is None:
         chat_handler = ChatHandler(bot)
   

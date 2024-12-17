@@ -17,7 +17,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('betting_bot.log', mode='w'),
+        logging.FileHandler('betting_bot.log', mode='w', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -37,7 +37,7 @@ class BettingBot:
         'soccer_uefa_europa_league'  # UEFA Europa League
     ]
     
-    def __init__(self):
+    def __init__(self, test_mode: bool = False):
         """Initialize the betting bot with all required clients."""
         load_dotenv()
         
@@ -45,30 +45,41 @@ class BettingBot:
             # Get API keys from environment variables
             odds_api_key = os.getenv('ODDS_API_KEY')
             openai_api_key = os.getenv('OPENAI_API_KEY')
-            twitter_api_key = os.getenv('TWITTER_API_KEY')
-            twitter_api_secret = os.getenv('TWITTER_API_SECRET')
-            twitter_access_token = os.getenv('TWITTER_ACCESS_TOKEN')
-            twitter_access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+            openai_org_id = os.getenv('OPENAI_ORG_ID')  # Get org ID from env
             
-            if not all([odds_api_key, openai_api_key, twitter_api_key, twitter_api_secret, 
-                       twitter_access_token, twitter_access_token_secret]):
+            if not all([odds_api_key, openai_api_key]):
                 raise ValueError("Missing required environment variables")
             
             # Initialize clients
             self.odds_client = OddsAPIClient(odds_api_key)
-            self.analyzer = OddsAnalyzer(openai_api_key)
+            self.analyzer = OddsAnalyzer(openai_api_key, openai_org_id)  # Pass org ID
             self.tweet_gen = TweetGenerator()
-            self.twitter = TwitterPoster(
-                api_key=twitter_api_key,
-                api_secret=twitter_api_secret,
-                access_token=twitter_access_token,
-                access_token_secret=twitter_access_token_secret
-            )
+            
+            # Initialize Twitter in test mode or with credentials
+            if test_mode:
+                self.twitter = TwitterPoster(test_mode=True)
+            else:
+                twitter_api_key = os.getenv('TWITTER_API_KEY')
+                twitter_api_secret = os.getenv('TWITTER_API_SECRET')
+                twitter_access_token = os.getenv('TWITTER_ACCESS_TOKEN')
+                twitter_access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
+                
+                if not all([twitter_api_key, twitter_api_secret, 
+                           twitter_access_token, twitter_access_token_secret]):
+                    raise ValueError("Missing Twitter credentials")
+                    
+                self.twitter = TwitterPoster(
+                    api_key=twitter_api_key,
+                    api_secret=twitter_api_secret,
+                    access_token=twitter_access_token,
+                    access_token_secret=twitter_access_token_secret
+                )
             
             # Initialize tracking variables
             self.last_tweet_time = None
             self.tweeted_matches = {}
             self.recent_tweets = set()
+            self.analyzed_matches = set()
             
             # Start a background thread for cleanup
             self._start_cleanup_thread()
@@ -112,70 +123,56 @@ class BettingBot:
             return False
         return True
 
-    def analyze_and_post(self) -> Optional[Dict]:
-        """Run the complete analysis and posting process."""
+    def analyze_and_post(self):
+        """Analyze matches and post about the best value bet."""
         try:
-            current_time = datetime.now()
-            logger.info(f"=== Starting new analysis cycle at {current_time} ===")
-            
             # Get current matches
             current_matches = self._get_current_matches()
             
             if not current_matches:
                 logger.info("No matches found to analyze")
-                return None
+                return
             
             # Filter out already tweeted matches
             new_matches = [
                 match for match in current_matches 
-                if not self._is_match_already_tweeted(match)
+                if not self._is_duplicate(match)
             ]
             
             if not new_matches:
                 logger.info("No new matches to analyze")
-                return None
-            
-            # Get best match and post
-            best_match = self._get_best_match(new_matches)
-            if best_match:
-                tweet = self.tweet_gen.generate_optimized_tweet(best_match)
-                if tweet:
-                    result = self.twitter.post_tweet(tweet)
-                    if result:
-                        self.last_tweet_time = current_time
-                        
-                        # Store the match in tweeted history
-                        match_id = f"{best_match['match_data']['home_team']}-{best_match['match_data']['away_team']}"
-                        self.tweeted_matches[match_id] = current_time
-                        
-                        self.recent_tweets.add(tweet)
-                        
-                        next_run = current_time + timedelta(hours=1)
-                        logger.info(f"=== Successfully posted new tweet ===")
-                        logger.info(f"Match: {best_match['match_data']['home_team']} vs {best_match['match_data']['away_team']}")
-                        logger.info(f"Next analysis scheduled for: {next_run}")
-                        logger.info("=== Analysis cycle complete ===")
-                        
-                        return {
-                            'timestamp': current_time,
-                            'match': best_match,
-                            'tweet': tweet
-                        }
-                else:
-                    logger.info("Failed to generate tweet")
-            else:
-                logger.info("No valuable matches found")
-            
-            return None
-            
+                return
+
+            # Process only one match at a time
+            for match in new_matches[:1]:  # Take only the first match
+                if not self.twitter.can_tweet_now():
+                    logger.info("Waiting for next tweet window")
+                    return
+                    
+                tweet_text = self.tweet_gen.generate_tweet(match)
+                if not tweet_text:
+                    continue
+                    
+                success = self.twitter.post_tweet(tweet_text)
+                if success:
+                    match_id = f"{match['match_data']['home_team']}-{match['match_data']['away_team']}"
+                    self.tweeted_matches[match_id] = datetime.now()
+                    logger.info(f"Successfully tweeted about match: {match_id}")
+                    break
+                
+                # If posting failed, wait before trying next match
+                time.sleep(5)
+                
         except Exception as e:
             logger.error(f"Error in analyze_and_post: {str(e)}")
-            return None
 
     def _get_current_matches(self) -> List[Dict]:
         """Get current matches to analyze."""
         try:
             matches = []
+            total_matches = 0
+            max_matches_per_league = 3  # Limit matches per league
+            
             for sport in self.SUPPORTED_SPORTS:
                 try:
                     logger.info(f"Fetching odds for {sport}")
@@ -184,23 +181,42 @@ class BettingBot:
                         regions=['uk', 'eu'],
                         markets=['h2h', 'totals']
                     )
+                    
                     if sport_odds:
-                        logger.info(f"Found {len(sport_odds)} matches for {sport}")
-                        for match in sport_odds:
+                        # Sort matches by start time and take only the closest ones
+                        sorted_matches = sorted(
+                            sport_odds,
+                            key=lambda x: x.get('commence_time', ''),
+                            reverse=False
+                        )[:max_matches_per_league]
+                        
+                        logger.info(f"Found {len(sorted_matches)} matches for {sport}")
+                        
+                        for match in sorted_matches:
                             match_id = f"{match['home_team']}_{match['away_team']}"
                             matches.append({
                                 'match_id': match_id,
                                 'sport': sport,
                                 'match_data': match
                             })
+                            total_matches += 1
+                            
+                            # Add delay between processing matches
+                            time.sleep(1)  # 1 second delay between matches
+                            
                     else:
                         logger.info(f"No matches found for {sport}")
+                        
+                    # Add delay between leagues
+                    time.sleep(2)  # 2 seconds delay between leagues
+                    
                 except Exception as e:
                     logger.error(f"Error fetching odds for {sport}: {str(e)}")
                     continue
-                
-            logger.info(f"Total matches found across all sports: {len(matches)}")
+                    
+            logger.info(f"Total matches found across all sports: {total_matches}")
             return matches
+            
         except Exception as e:
             logger.error(f"Error getting current matches: {str(e)}")
             return []
@@ -289,84 +305,43 @@ class BettingBot:
             return 0.0
 
     def run_scheduled(self):
-        """Run the bot on a schedule."""
-        try:
-            logger.info("=== Starting scheduled bot ===")
-            
-            # Run first analysis immediately
-            logger.info("Running initial analysis...")
-            self.analyze_and_post()
-            
-            # Instead of using schedule library, use a simple loop with time check
-            while True:
-                try:
-                    current_time = datetime.now()
-                    
-                    if self.last_tweet_time:
-                        time_since_last = current_time - self.last_tweet_time
-                        minutes_until_next = 60 - (time_since_last.total_seconds() / 60)
-                        
-                        if time_since_last.total_seconds() >= 3600:  # 1 hour in seconds
-                            logger.info("Hour has passed, running new analysis...")
-                            self.analyze_and_post()
-                        else:
-                            logger.info(f"=== Next run in {minutes_until_next:.1f} minutes ===")
-                    else:
-                        # If no last tweet time, post immediately
-                        logger.info("No previous tweet found, posting now...")
-                        self.analyze_and_post()
-                    
-                    time.sleep(60)  # Check every minute
-                    
-                except Exception as e:
-                    logger.error(f"Error in run loop: {str(e)}")
-                    # Don't exit the loop on error, just log and continue
-                    time.sleep(300)  # Wait 5 minutes on error
-                    continue
+        """Run the bot continuously."""
+        logger.info("Starting automated betting bot")
+        
+        while True:
+            try:
+                current_time = datetime.now()
                 
-        except Exception as e:
-            logger.error(f"Critical error in scheduler: {str(e)}")
-            # Don't raise the exception, try to recover
-            time.sleep(300)  # Wait 5 minutes
-            self.run_scheduled()  # Restart the scheduler
-
-    def _is_duplicate_match(self, match: Dict) -> bool:
-        """Check if this match or team combination has been analyzed recently."""
-        try:
-            home_team = match['match_data']['home_team']
-            away_team = match['match_data']['away_team']
-            team_pair = f"{home_team}-{away_team}"
-            
-            # Check if we've already analyzed this team combination
-            if team_pair in self.analyzed_team_pairs:
-                logger.info(f"Skipping duplicate match: {team_pair}")
-                return True
+                # Check if we can tweet
+                if self.twitter.can_tweet_now():
+                    self.analyze_and_post()
+                else:
+                    next_time = self.twitter.get_next_tweet_time()
+                    logger.info(f"Waiting until next tweet window at {next_time.strftime('%H:%M:%S')}")
                 
-            # Add to tracked teams
-            self.analyzed_team_pairs.add(team_pair)
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking duplicate match: {str(e)}")
-            return True
+                # Sleep for 5 minutes before next check
+                time.sleep(300)
+                
+            except Exception as e:
+                logger.error(f"Error in scheduler: {str(e)}")
+                time.sleep(300)  # Wait 5 minutes on error
+                continue
 
-    def _is_match_already_tweeted(self, match: Dict) -> bool:
-        """Check if we've already tweeted about this match."""
-        try:
-            home_team = match['match_data']['home_team']
-            away_team = match['match_data']['away_team']
-            match_id = f"{home_team}-{away_team}"
-            reverse_match_id = f"{away_team}-{home_team}"
-            
-            # Check if either combination exists in tweeted matches
-            if match_id in self.tweeted_matches or reverse_match_id in self.tweeted_matches:
-                logger.info(f"Match already tweeted: {match_id}")
-                return True
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking tweeted match: {str(e)}")
+    def _is_duplicate(self, match: Dict) -> bool:
+        match_id = f"{match['home_team']}-{match['away_team']}"
+        reverse_id = f"{match['away_team']}-{match['home_team']}"
+        
+        # Check if match was already tweeted
+        if match_id in self.tweeted_matches or reverse_id in self.tweeted_matches:
+            logger.info(f"Skipping duplicate match: {match_id}")
             return True
+            
+        # Check if match was analyzed recently
+        if match_id in self.analyzed_matches:
+            return True
+            
+        self.analyzed_matches.add(match_id)
+        return False
 
 def main():
     """Main function to start the bot."""
