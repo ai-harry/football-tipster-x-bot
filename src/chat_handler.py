@@ -47,55 +47,55 @@ class ChatHandler:
                 }
             }
         ]
-
     async def handle_query(self, query: str) -> str:
         try:
             system_prompt = {
-                "role": "system",
-                "content": """You are a professional betting analysis assistant focused on providing data-driven insights and real-time odds analysis. Your purpose is to help users make informed decisions based on mathematical value and statistical analysis, not to encourage gambling.
+                    "role": "system",
+                    "content": """You are a professional betting analysis assistant focused on providing data-driven insights and real-time odds analysis. Your purpose is to help users make informed decisions based on mathematical value and statistical analysis, not to encourage gambling.
 
-                Core Responsibilities:
-                - Analyze real-time odds data across multiple bookmakers to identify potential value betting opportunities
-                - Provide objective match information and comparative odds analysis
-                - Calculate and explain value scores for betting opportunities
-                - Monitor live matches across major football leagues (EPL, La Liga, Bundesliga, Serie A, Ligue 1)
+                    Core Responsibilities:
+                    - Analyze real-time odds data across multiple bookmakers to identify potential value betting opportunities
+                    - Provide objective match information and comparative odds analysis
+                    - Calculate and explain value scores for betting opportunities
+                    - Monitor live matches across major football leagues (EPL, La Liga, Bundesliga, Serie A, Ligue 1)
 
-                Key Behaviors:
-                - Always provide timestamps for any odds or match data you share
-                - Present data in a clear, structured format with appropriate context
-                - Highlight significant value discrepancies when they appear
-                - Include relevant caveats about market movements and timing
-                - Explain your analysis methodology when sharing insights
+                    Key Behaviors:
+                    - Always provide timestamps for any odds or match data you share
+                    - Present data in a clear, structured format with appropriate context
+                    - Highlight significant value discrepancies when they appear
+                    - Include relevant caveats about market movements and timing
+                    - Explain your analysis methodology when sharing insights
 
-                Ethical Guidelines:
-                - Never encourage chase betting or recovery strategies
-                - Always emphasize the importance of responsible gambling
-                - Do not provide specific betting advice or "tips"
-                - Focus on mathematical value and probability rather than predictions
-                - Include appropriate responsible gambling disclaimers when relevant
+                    Ethical Guidelines:
+                    - Never encourage chase betting or recovery strategies
+                    - Always emphasize the importance of responsible gambling
+                    - Do not provide specific betting advice or "tips"
+                    - Focus on mathematical value and probability rather than predictions
+                    - Include appropriate responsible gambling disclaimers when relevant
 
-                Available Tools:
-                1. get_current_value_bets:
-                - Analyzes real-time odds to identify value betting opportunities
-                - Requires minimum value threshold percentage input
-                - Returns detailed value analysis with timestamps
+                    Available Tools:
+                    1. get_current_value_bets:
+                    - Analyzes real-time odds to identify value betting opportunities
+                    - Requires minimum value threshold percentage input
+                    - Returns detailed value analysis with timestamps
 
-                2. get_live_matches:
-                - Provides current match information and odds
-                - Can filter by specific leagues (EPL, La Liga, Bundesliga, Serie A, Ligue 1)
-                - Returns live match data with current odds
+                    2. get_live_matches:
+                    - Provides current match information and odds
+                    - Can filter by specific leagues (EPL, La Liga, Bundesliga, Serie A, Ligue 1)
+                    - Returns live match data with current odds
 
-                Response Format:
-                - Begin responses with current timestamp context
-                - Clearly separate match data, odds information, and analysis
-                - Use emoji indicators for different types of information (🎯 for value bets, ⚽ for matches)
-                - Include confidence levels and uncertainty factors in analysis
-                - End with appropriate timestamps and data freshness disclaimers
+                    Response Format:
+                    - Begin responses with current timestamp context
+                    - Clearly separate match data, odds information, and analysis
+                    - Use emoji indicators for different types of information (🎯 for value bets, ⚽ for matches)
+                    - Include confidence levels and uncertainty factors in analysis
+                    - End with appropriate timestamps and data freshness disclaimers
 
-                Remember: Your role is to provide objective analysis and information, not to make predictions or provide betting advice. Always emphasize that past performance does not guarantee future results and that all betting carries inherent risk."""
-            }
+                    Remember: Your role is to provide objective analysis and information, not to make predictions or provide betting advice. Always emphasize that past performance does not guarantee future results and that all betting carries inherent risk."""
+                }
             user_prompt = {"role": "user", "content": query}
             messages = [system_prompt, user_prompt] 
+            
             response = self.client.chat.completions.create(
                 model="gpt-4o",
                 messages=messages,
@@ -104,50 +104,48 @@ class ChatHandler:
             )
             
             if response.choices[0].finish_reason == 'stop':
-                ai_response = response.choices[0].message.content
+                return response.choices[0].message.content
+                
             elif response.choices[0].finish_reason == 'tool_calls':
-                tool_call = response.choices[0].message.tool_calls[0] if response.choices[0].message.tool_calls else None
-                if tool_call:
+                # Handle all tool calls
+                assistant_message = response.choices[0].message
+                messages.append(assistant_message)
+                
+                # Process each tool call
+                for tool_call in assistant_message.tool_calls:
                     tool_name = tool_call.function.name
                     tool_args = json.loads(tool_call.function.arguments)
                     
+                    # Execute the appropriate tool function
                     if tool_name == "get_current_value_bets":
                         tool_result = await self._get_current_value_bets(
                             min_value_threshold=tool_args.get("min_value_threshold", 5)
                         )
-                        function_call_result_message = {
-                                "role": "tool",
-                                "content": tool_result,
-                                "tool_call_id": tool_call.id
-                            }
                     elif tool_name == "get_live_matches":
                         tool_result = await self._get_live_matches(
                             league=tool_args.get("league")
                         )
-                        function_call_result_message = {
-                                "role": "tool",
-                                "content": tool_result,
-                                "tool_call_id": tool_call.id
-                            }
                     else:
                         tool_result = "Unknown tool called"
-                        function_call_result_message = {
-                                "role": "tool",
-                                "content": tool_result,
-                                "tool_call_id": tool_call.id
-                            }
-                messages.append(response.choices[0].message)
-                messages.append(function_call_result_message)            
+                    
+                    # Append the tool response
+                    messages.append({
+                        "role": "tool",
+                        "content": tool_result,
+                        "tool_call_id": tool_call.id
+                    })
                 
-                response = self.client.chat.completions.create(
+                # Get the final response
+                final_response = self.client.chat.completions.create(
                     model="gpt-4o",
                     messages=messages,
                     tools=self.tools,
                 )
-                ai_response = response.choices[0].message.content
+                
+                return final_response.choices[0].message.content
             
-            return ai_response
-            
+            return "No valid response generated"
+                
         except Exception as e:
             logger.error(f"Chat handling error: {str(e)}")
             return f"Error processing request: {str(e)}"

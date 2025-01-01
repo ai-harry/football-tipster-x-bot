@@ -1,6 +1,80 @@
-2025-01-01 23:30:33,385 - INFO - Successfully resolved api.the-odds-api.com
-2025-01-01 23:30:37,464 - INFO - Successfully connected to The Odds API
-2025-01-01 23:30:37,464 - INFO - OpenAI analyzer initialized successfully
-2025-01-01 23:30:37,474 - INFO - Tweet generator initialized successfully
-2025-01-01 23:30:37,475 - INFO - BettingBot initialized successfully
-2025-01-01 23:30:37,475 - INFO - Monitoring 7 sports leagues
+2025-01-01 23:49:31,567 - INFO - Successfully resolved api.the-odds-api.com
+2025-01-01 23:49:33,387 - INFO - Successfully connected to The Odds API
+2025-01-01 23:49:33,388 - INFO - OpenAI analyzer initialized successfully
+2025-01-01 23:49:33,400 - INFO - Tweet generator initialized successfully
+2025-01-01 23:49:33,400 - INFO - BettingBot initialized successfully
+2025-01-01 23:49:33,400 - INFO - Monitoring 7 sports leagues
+2025-01-01 23:50:34,581 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-01-01 23:50:34,600 - INFO - Fetching odds for soccer_epl
+2025-01-01 23:50:34,601 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_epl/odds
+2025-01-01 23:50:35,142 - INFO - Successfully fetched odds for soccer_epl
+2025-01-01 23:50:35,143 - INFO - Found 3 matches for soccer_epl
+2025-01-01 23:50:40,148 - INFO - Fetching odds for soccer_spain_la_liga
+2025-01-01 23:50:40,149 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_spain_la_liga/odds
+2025-01-01 23:50:40,704 - INFO - Successfully fetched odds for soccer_spain_la_liga
+2025-01-01 23:50:40,704 - INFO - Found 3 matches for soccer_spain_la_liga
+2025-01-01 23:50:45,710 - INFO - Fetching odds for soccer_germany_bundesliga
+2025-01-01 23:50:45,710 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_germany_bundesliga/odds
+2025-01-01 23:50:52,110 - INFO - Successfully fetched odds for soccer_germany_bundesliga
+2025-01-01 23:50:52,110 - INFO - Found 3 matches for soccer_germany_bundesliga
+2025-01-01 23:50:57,115 - INFO - Fetching odds for soccer_italy_serie_a
+2025-01-01 23:50:57,116 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_italy_serie_a/odds
+2025-01-01 23:51:00,757 - INFO - Successfully fetched odds for soccer_italy_serie_a
+2025-01-01 23:51:00,757 - INFO - Found 3 matches for soccer_italy_serie_a
+2025-01-01 23:51:05,763 - INFO - Fetching odds for soccer_france_ligue_one
+2025-01-01 23:51:05,763 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_france_ligue_one/odds
+2025-01-01 23:51:06,162 - INFO - Successfully fetched odds for soccer_france_ligue_one
+2025-01-01 23:51:06,163 - INFO - Found 3 matches for soccer_france_ligue_one
+2025-01-01 23:51:11,167 - INFO - Fetching odds for soccer_uefa_champs_league
+2025-01-01 23:51:11,168 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_champs_league/odds
+2025-01-01 23:51:11,663 - INFO - Successfully fetched odds for soccer_uefa_champs_league
+2025-01-01 23:51:11,664 - INFO - Found 3 matches for soccer_uefa_champs_league
+2025-01-01 23:51:16,668 - INFO - Fetching odds for soccer_uefa_europa_league
+2025-01-01 23:51:16,668 - INFO - Requesting odds from: https://api.the-odds-api.com/v4/sports/soccer_uefa_europa_league/odds
+2025-01-01 23:51:17,041 - INFO - Successfully fetched odds for soccer_uefa_europa_league
+2025-01-01 23:51:17,042 - INFO - Found 3 matches for soccer_uefa_europa_league
+2025-01-01 23:51:22,046 - INFO - Total matches found across all sports: 21
+2025-01-01 23:51:22,048 - INFO - Fetching odds for soccer_epl
+2025-01-01 23:51:22,048 - INFO - Returning cached odds data
+2025-01-01 23:51:22,048 - INFO - Found 3 matches for soccer_epl
+2025-01-01 23:51:27,053 - INFO - Fetching odds for soccer_spain_la_liga
+2025-01-01 23:51:27,053 - INFO - Returning cached odds data
+2025-01-01 23:51:27,054 - INFO - Found 3 matches for soccer_spain_la_liga
+2025-01-01 23:51:32,058 - INFO - Fetching odds for soccer_germany_bundesliga
+2025-01-01 23:51:32,059 - INFO - Returning cached odds data
+2025-01-01 23:51:32,059 - INFO - Found 3 matches for soccer_germany_bundesliga
+2025-01-01 23:51:37,063 - INFO - Fetching odds for soccer_italy_serie_a
+2025-01-01 23:51:37,064 - INFO - Returning cached odds data
+2025-01-01 23:51:37,064 - INFO - Found 3 matches for soccer_italy_serie_a
+2025-01-01 23:51:42,068 - INFO - Fetching odds for soccer_france_ligue_one
+2025-01-01 23:51:42,069 - INFO - Returning cached odds data
+2025-01-01 23:51:42,069 - INFO - Found 3 matches for soccer_france_ligue_one
+2025-01-01 23:51:47,074 - INFO - Fetching odds for soccer_uefa_champs_league
+2025-01-01 23:51:47,075 - INFO - Returning cached odds data
+2025-01-01 23:51:47,075 - INFO - Found 3 matches for soccer_uefa_champs_league
+2025-01-01 23:51:52,081 - INFO - Fetching odds for soccer_uefa_europa_league
+2025-01-01 23:51:52,082 - INFO - Returning cached odds data
+2025-01-01 23:51:52,082 - INFO - Found 3 matches for soccer_uefa_europa_league
+2025-01-01 23:51:57,086 - INFO - Total matches found across all sports: 21
+2025-01-01 23:51:57,087 - INFO - Calculated value score: 249.99 for match: Brentford vs Arsenal
+2025-01-01 23:51:57,087 - INFO - Calculated value score: 1.8599999999999999 for match: Tottenham Hotspur vs Newcastle United
+2025-01-01 23:51:57,088 - INFO - Calculated value score: 9.25 for match: Aston Villa vs Leicester City
+2025-01-01 23:51:57,088 - INFO - Calculated value score: 8.120000000000001 for match: Valencia vs Real Madrid
+2025-01-01 23:51:57,088 - INFO - Calculated value score: 0.7599999999999998 for match: Rayo Vallecano vs Celta Vigo
+2025-01-01 23:51:57,088 - INFO - Calculated value score: 0.8700000000000001 for match: Alavés vs Girona
+2025-01-01 23:51:57,088 - INFO - Calculated value score: 1.6100000000000003 for match: Borussia Dortmund vs Bayer Leverkusen
+2025-01-01 23:51:57,089 - INFO - Calculated value score: 1.99 for match: 1. FC Heidenheim vs Union Berlin
+2025-01-01 23:51:57,089 - INFO - Calculated value score: 2.76 for match: FC St. Pauli vs Eintracht Frankfurt
+2025-01-01 23:51:57,089 - INFO - Calculated value score: 1.25 for match: Venezia vs Empoli
+2025-01-01 23:51:57,089 - INFO - Calculated value score: 1.06 for match: Fiorentina vs Napoli
+2025-01-01 23:51:57,089 - INFO - Calculated value score: 0.98 for match: Hellas Verona vs Udinese
+2025-01-01 23:51:57,090 - INFO - Calculated value score: 1.6 for match: Nice vs Rennes
+2025-01-01 23:51:57,090 - INFO - Calculated value score: 1.71 for match: Saint Etienne vs Stade de Reims
+2025-01-01 23:51:57,090 - INFO - Calculated value score: 5.1499999999999995 for match: Lille vs Nantes
+2025-01-01 23:51:57,090 - INFO - Calculated value score: 1.73 for match: Monaco vs Aston Villa
+2025-01-01 23:51:57,090 - INFO - Calculated value score: 11.53 for match: Atalanta vs SK Sturm Graz
+2025-01-01 23:51:57,091 - INFO - Calculated value score: 2.3899999999999997 for match: Atlético Madrid vs Bayer Leverkusen
+2025-01-01 23:51:57,091 - INFO - Calculated value score: 14.43 for match: Galatasaray vs Dynamo Kyiv
+2025-01-01 23:51:57,091 - INFO - Calculated value score: 3.9299999999999997 for match: Besiktas JK vs Athletic Bilbao
+2025-01-01 23:51:57,091 - INFO - Calculated value score: 2.55 for match: AZ Alkmaar vs Roma
+2025-01-01 23:52:14,227 - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
