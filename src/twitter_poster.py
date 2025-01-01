@@ -31,34 +31,34 @@ class TwitterPoster:
             logger.info("Twitter client initialized in TEST MODE")
             return
             
-        try:
-            # Initialize both v1.1 and v2 clients
-            auth = tweepy.OAuthHandler(api_key, api_secret)
-            auth.set_access_token(access_token, access_token_secret)
+        # try:
+        #     # Initialize both v1.1 and v2 clients
+        #     auth = tweepy.OAuthHandler(api_key, api_secret)
+        #     auth.set_access_token(access_token, access_token_secret)
             
-            self.api = tweepy.API(auth, wait_on_rate_limit=True)
-            self.client = tweepy.Client(
-                consumer_key=api_key,
-                consumer_secret=api_secret,
-                access_token=access_token,
-                access_token_secret=access_token_secret,
-                wait_on_rate_limit=True
-            )
+        #     self.api = tweepy.API(auth, wait_on_rate_limit=True)
+        #     self.client = tweepy.Client(
+        #         consumer_key=api_key,
+        #         consumer_secret=api_secret,
+        #         access_token=access_token,
+        #         access_token_secret=access_token_secret,
+        #         wait_on_rate_limit=True
+        #     )
             
-            # Verify credentials
-            self._verify_credentials()
+        #     # Verify credentials
+        #     self._verify_credentials()
             
-            # Calculate first tweet time
-            self._schedule_next_tweet()
+        #     # Calculate first tweet time
+        #     self._schedule_next_tweet()
             
-            logger.info(f"Twitter client initialized successfully. Will post {self.TWEETS_PER_DAY} tweets per day")
-            logger.info(f"Tweet interval: {self.INTERVAL_MINUTES} minutes")
-            if self.next_scheduled_time:
-                logger.info(f"First tweet scheduled for: {self.next_scheduled_time.strftime('%H:%M:%S')}")
+        #     logger.info(f"Twitter client initialized successfully. Will post {self.TWEETS_PER_DAY} tweets per day")
+        #     logger.info(f"Tweet interval: {self.INTERVAL_MINUTES} minutes")
+        #     if self.next_scheduled_time:
+        #         logger.info(f"First tweet scheduled for: {self.next_scheduled_time.strftime('%H:%M:%S')}")
             
-        except Exception as e:
-            logger.error(f"Failed to initialize Twitter client: {str(e)}")
-            raise
+        # except Exception as e:
+        #     logger.error(f"Failed to initialize Twitter client: {str(e)}")
+        #     raise
 
     def _verify_credentials(self):
         """Verify Twitter API credentials."""
