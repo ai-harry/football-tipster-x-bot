@@ -42,7 +42,7 @@ async def chat(query: ChatQuery):
     """Chat endpoint for terminal interaction."""
     global bot, chat_handler
     try:
-        if not bot or not chat_handler:
+        if not chat_handler:
             return {"response": "System not initialized. Please start the bot first."}
         
         response = await chat_handler.handle_query(query.query)
@@ -85,12 +85,12 @@ async def chat(query: ChatQuery):
 #         "message": "Automation is running" if bot is not None else "Automation is stopped"
 #     } 
 
-# @app.on_event("startup")
-# async def startup_event():
-#     global bot, chat_handler
-#     if bot is None:
-#         # Initialize with test_mode=False for production
-#         bot = BettingBot(test_mode=False)
-#     if chat_handler is None:
-#         chat_handler = ChatHandler(bot)
+@app.on_event("startup")
+async def startup_event():
+    global bot, chat_handler
+    if bot is None:
+        # Initialize with test_mode=False for production
+        bot = BettingBot(test_mode=False)
+    if chat_handler is None:
+        chat_handler = ChatHandler(bot)
   

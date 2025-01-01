@@ -45,14 +45,14 @@ class BettingBot:
             # Get API keys from environment variables
             odds_api_key = os.getenv('ODDS_API_KEY')
             openai_api_key = os.getenv('OPENAI_API_KEY')
-            openai_org_id = os.getenv('OPENAI_ORG_ID')  # Get org ID from env
+            # openai_org_id = os.getenv('OPENAI_ORG_ID')  # Get org ID from env
             
             if not all([odds_api_key, openai_api_key]):
                 raise ValueError("Missing required environment variables")
             
             # Initialize clients
             self.odds_client = OddsAPIClient(odds_api_key)
-            self.analyzer = OddsAnalyzer(openai_api_key, openai_org_id)  # Pass org ID
+            self.analyzer = OddsAnalyzer(openai_api_key)  # Pass org ID
             self.tweet_gen = TweetGenerator()
             
             # Initialize Twitter in test mode or with credentials
@@ -65,7 +65,7 @@ class BettingBot:
                 twitter_access_token_secret = os.getenv('TWITTER_ACCESS_TOKEN_SECRET')
                 
                 if not all([twitter_api_key, twitter_api_secret, 
-                           twitter_access_token, twitter_access_token_secret]):
+                        twitter_access_token, twitter_access_token_secret]):
                     raise ValueError("Missing Twitter credentials")
                     
                 self.twitter = TwitterPoster(
